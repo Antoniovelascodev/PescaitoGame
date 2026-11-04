@@ -7,17 +7,29 @@ G.Home = (function () {
   const tank = () => { const s = G.S; if (!s.tank) s.tank = []; return s.tank; };
   H.tank = tank;
 
-  /* Dormir: solo de 19:00 a 07:00; avanza el reloj hasta las 7 de la mañana */
+  /* Dormir: de 19:00 a 07:00 en la costa y de 18:00 a 06:00 en el valle; avanza el reloj hasta la mañana */
   H.sleep = function () {
-    const h = G.env.hour;
-    if (h >= 7 && h < 19) { G.UI.toast('🛏️ Aún no tienes sueño: puedes dormir de 19:00 a 07:00', 'warn'); return false; }
-    const hrs = h >= 19 ? 31 - h : 7 - h;
+    const h = G.env.hour, valle = G.mapId === 'valle', wake = valle ? 6 : 7, from = valle ? 18 : 19;
+    if (h >= wake && h < from) { G.UI.toast(`🛏️ Aún no tienes sueño: puedes dormir de ${U.clock(from)} a ${U.clock(wake)}`, 'warn'); return false; }
+    const hrs = h >= from ? 24 + wake - h : wake - h;
     G.Ach.count('slept');
     G.addTime(hrs);
+    if (valle) G.newDay();
     G.Audio.play('gem');
     G.save(); G.UI.refreshHud();
     G.UI.showMsg('😴 ¡Buenos días!', `Has dormido hasta las ${U.clock(G.env.hour)}. Es el día ${G.S.day}.`);
     return true;
+  };
+
+  /* Te caes de sueño a las 02:00 en el valle: despiertas en casa a las 06:00 */
+  H.passOut = function () {
+    const P = G.P;
+    if (G.Fish.state !== 'idle') { G.Fish.state = 'idle'; G.Fish.cur = null; G.Fish.rings.length = 0; G.UI.fishHud(null); }
+    if (G.Interior.active) G.Interior.leave();
+    G.addTime(6 - G.env.hour); G.newDay();
+    const d = G.World.HOME_DOOR; P.x = d.x; P.y = d.y; P.ang = Math.PI / 2; if (G.snapCam) G.snapCam();
+    G.save(); G.UI.refreshHud();
+    G.UI.showMsg('😴 ¡Te has quedado dormido!', `Se hizo muy tarde y te desmayaste de sueño. Despiertas en casa a las ${U.clock(G.env.hour)} de ${G.dateText()}.`);
   };
 
   const UI = G.UI;

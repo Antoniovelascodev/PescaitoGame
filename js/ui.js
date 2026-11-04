@@ -18,26 +18,42 @@ G.UI = (function () {
   UI.modalOpen = () => !!ms || !$('dive').classList.contains('hidden') || !$('title').classList.contains('hidden');
 
   /* ---------- HUD ---------- */
+  /* Actualiza un chip del HUD: icono pixel (solo si cambia) y texto */
+  const chip = (id, icon, text) => {
+    const el = $(id), im = el.querySelector('img'), t = el.querySelector('b, span');
+    if (im.dataset.k !== icon) { im.dataset.k = icon; im.src = G.Pix.icon(icon); }
+    if (t.textContent !== text) t.textContent = text;
+  };
+  const BAIT_IC = { gusano: 'worm', gusano_ini: 'worm', sardina: 'sardine', cangrejo: 'crab' };
   UI.refreshHud = function () {
-    const S = G.S, e = G.env;
-    $('hMoney').textContent = '💶 ' + U.money(S.money);
-    const h = e.hour, ic = h >= 6 && h < 8.5 ? '🌅' : h >= 8.5 && h < 19 ? '☀️' : h >= 19 && h < 21 ? '🌇' : '🌙';
-    $('hClock').textContent = ic + ' ' + U.clock(h) + ' · Día ' + S.day;
-    $('hSwell').textContent = '🌊 ' + G.SWELL_NAMES[S.swell];
-    const b = G.BAITS.find(x => x.id === S.eq.bait);
-    $('hBait').textContent = b.icon + ' ' + (S.baits[b.id] || 0);
+    const S = G.S, e = G.env, h = e.hour, valle = G.mapId === 'valle';
+    const night = h >= 20.5 || h < 6, twi = (h >= 6 && h < 8) || (h >= 18 && h < 20.5);
+    const ico = night ? 'moon' : twi ? 'sunset' : 'sun', ci = $('hClockIc');
+    if (ci.dataset.k !== ico) { ci.dataset.k = ico; ci.src = G.Pix.icon(ico); }
+    $('hTime').textContent = U.clock(h);
+    $('hDate').textContent = valle ? G.dateText() : 'Día ' + S.day;
+    const mi = $('hMoneyIc'); if (!mi.dataset.k) { mi.dataset.k = 1; mi.src = G.Pix.icon('coin'); }
+    $('hMoneyV').textContent = U.money(S.money);
     const mny = Math.round(S.money * 100) / 100;
     if (UI._lastMoney != null && mny > UI._lastMoney + 0.004) UI.moneyPop(mny - UI._lastMoney);
     UI._lastMoney = mny;
-    $('hGems').textContent = '💎 ' + (S.gems || 0);
+    const b = G.BAITS.find(x => x.id === S.eq.bait);
+    chip('hBait', BAIT_IC[b.id] || 'worm', String(S.baits[b.id] || 0));
+    chip('hCool', 'cooler', S.bag.length + '/' + G.coolerCap());
+    chip('hGems', 'gem', String(S.gems || 0));
+    if (valle) { const rn = G.weather() === 'rain'; chip('hSwell', rn ? 'wave' : ['flower', 'sun', 'leaf', 'snow'][G.season()], rn ? 'Lluvia' : ['Fresco', 'Cálido', 'Ventoso', 'Helado'][G.season()]); }
+    else chip('hSwell', 'wave', G.SWELL_NAMES[S.swell]);
     if (G.Quests) {
-      const q = G.Quests.active()[0], hq = $('hQuest'), nr = G.Quests.readyCount();
+      const q = G.Quests.active()[0], nr = G.Quests.readyCount(), hq = $('hQuest');
       hq.classList.toggle('ready', nr > 0);
-      hq.textContent = nr ? '📜 ¡Misión lista! Reclama tu premio' : q ? '📜 ' + q.name + ' · ' + Math.floor(G.Quests.progress(q) * 10) / 10 + '/' + q.max : '📜 Misiones';
+      const txt = nr ? '¡Misión lista!' : q ? q.name + ' ' + Math.floor(G.Quests.progress(q) * 10) / 10 + '/' + q.max : 'Misiones';
+      const im = hq.querySelector('img'); if (!im.dataset.k) { im.dataset.k = 1; im.src = G.Pix.icon('scroll'); }
+      const sp = hq.querySelector('span'); if (sp.textContent !== txt) sp.textContent = txt;
       $('btnMenu').classList.toggle('dot', nr > 0);
     }
-    $('hCool').textContent = '🧊 ' + S.bag.length + '/' + G.coolerCap();
   };
+  /* iconos de los botones de la derecha */
+  (function () { for (const [id, ic] of [['btnMap', 'map'], ['btnMenu', 'gear'], ['btnZoomIn', 'plus'], ['btnZoomOut', 'minus']]) $(id).innerHTML = `<img class="pxi" src="${G.Pix.icon(ic)}" alt="">`; })();
   UI.moneyPop = function (d) {
     const box = $('moneyPops'); if (!box) return;
     const el = document.createElement('div'); el.className = 'mpop'; el.textContent = '+' + d.toFixed(2).replace('.', ',') + ' €';
@@ -50,18 +66,18 @@ G.UI = (function () {
   let lastBtn = '';
   UI.syncButtons = function () {
     const st = G.Fish.state;
-    let key = st, ic = '🎣', lb = 'LANZAR', cls = 'act big';
-    if (st === 'charge') { ic = '💪'; lb = '¡SUELTA!'; }
-    else if (st === 'cast') { ic = '🎣'; lb = '...'; }
-    else if (st === 'wait' || st === 'nibble') { ic = '↩️'; lb = 'RECOGER'; }
-    else if (st === 'bite') { ic = '⚡'; lb = '¡CLAVAR!'; cls += ' bite'; }
-    else if (st === 'fight') { ic = '🌀'; lb = 'RECOGE'; cls += ' reel'; }
-    else if (st === 'steal') { ic = '🕊️'; lb = '...'; }
-    else if (st === 'result') { ic = '✔️'; lb = '...'; }
+    let key = st, ic = 'rod', lb = 'LANZAR', cls = 'act big';
+    if (st === 'charge') { ic = 'rod'; lb = '¡SUELTA!'; }
+    else if (st === 'cast') { ic = 'rod'; lb = '...'; }
+    else if (st === 'wait' || st === 'nibble') { ic = 'reel'; lb = 'RECOGER'; }
+    else if (st === 'bite') { ic = 'bolt'; lb = '¡CLAVAR!'; cls += ' bite'; }
+    else if (st === 'fight') { ic = 'reel'; lb = 'RECOGE'; cls += ' reel'; }
+    else if (st === 'steal') { ic = 'bird'; lb = '...'; }
+    else if (st === 'result') { ic = 'check'; lb = '...'; }
     if (key === lastBtn) return;
     lastBtn = key;
     castBtn.className = cls;
-    castBtn.innerHTML = `<span class="ic">${ic}</span><span class="lb">${lb}</span>`;
+    castBtn.innerHTML = `<span class="ic"><img class="pxi inl" src="${G.Pix.icon(ic)}" alt=""></span><span class="lb">${lb}</span>`;
   };
   const dayBtn = $('btnShop');
   UI.syncDayButton = function () {
@@ -146,7 +162,7 @@ G.UI = (function () {
     spear: { title: 'Arpón y Buceo', tabs: [['buceo', '🤿 Buceo y arpones']], extras: [] },
     paddle: { title: 'Paddle Surf', tabs: [['extras', '🏄 Tablas']], extras: ['paddle'] },
   };
-  const TITLES = { inv: 'Inventario', shop: 'Pesca El Anzuelo', lonja: 'Lonja · Proveedores', map: 'Mapa de Málaga', menu: 'Ajustes' };
+  const TITLES = { inv: 'Inventario', shop: 'Pesca El Anzuelo', lonja: 'Lonja · Proveedores', map: 'Mapa', menu: 'Ajustes' };
 
   function render() {
     if (!ms) return;
@@ -334,9 +350,15 @@ G.UI = (function () {
 
   /* ----- Mapa ----- */
   function mapBody() {
-    return `<p class="ds" style="color:var(--mut)">Viaja rápido a un punto de pesca de la costa de Málaga.</p>` + `<div class="item"><div style="font-size:30px">🏪</div><div class="meta"><div class="nm">Paseo de las tiendas</div><div class="ds">Cebos, cañas, lonja, tu pescadería y el marinero</div></div><button class="btn sm" data-act="travel" data-v="tiendas">Ir</button></div>` + G.World.SPOTS.map(s =>
-      `<div class="item"><div style="font-size:30px">${s.icon}</div><div class="meta"><div class="nm">${s.name}</div><div class="ds">${s.sub}${s.locked && !G.unlocked('cabopino') ? ' · 🔒 misión «Explorador»' : ''}</div></div><button class="btn sm" data-act="travel" data-v="${s.id}" ${s.locked && !G.unlocked('cabopino') ? 'disabled' : ''}>Ir</button></div>`).join('') +
-      `<div class="item"><div style="font-size:30px">🤿</div><div class="meta"><div class="nm">Zona de buceo</div><div class="ds">Rocas del Peñón · pesca submarina</div></div><button class="btn sm" data-act="travel" data-v="dive">Ir</button></div>`;
+    const valle = G.mapId === 'valle';
+    const spots = G.World.SPOTS.map(s => {
+      const lk = s.locked && !G.unlocked('cabopino');
+      return `<div class="item"><div style="font-size:30px">${s.icon}</div><div class="meta"><div class="nm">${s.name}</div><div class="ds">${s.sub}${lk ? ' · 🔒 misión «Explorador»' : ''}</div></div><button class="btn sm" data-act="travel" data-v="${s.id}" ${lk ? 'disabled' : ''}>Ir</button></div>`;
+    }).join('');
+    return `<p class="ds" style="color:var(--mut)">Viaja rápido a un punto de pesca ${valle ? 'del valle' : 'de la costa de Málaga'}.</p>`
+      + `<div class="item"><div style="font-size:30px">🏪</div><div class="meta"><div class="nm">${valle ? 'Pueblo y tiendas' : 'Paseo de las tiendas'}</div><div class="ds">Cebos, cañas, lonja, tu pescadería y ${valle ? 'vecinos' : 'el marinero'}</div></div><button class="btn sm" data-act="travel" data-v="tiendas">Ir</button></div>`
+      + spots
+      + (valle ? '' : `<div class="item"><div style="font-size:30px">🤿</div><div class="meta"><div class="nm">Zona de buceo</div><div class="ds">Rocas del Peñón · pesca submarina</div></div><button class="btn sm" data-act="travel" data-v="dive">Ir</button></div>`);
   }
 
   /* ----- Ajustes ----- */
@@ -345,6 +367,8 @@ G.UI = (function () {
       <div class="item"><div style="font-size:28px">🏆</div><div class="meta"><div class="nm">Logros</div><div class="ds">Gana gemas 💎 jugando</div></div><button class="btn sm" data-act="go" data-v="ach">Ver</button></div>
       <div class="item"><div style="font-size:28px">📅</div><div class="meta"><div class="nm">Calendario diario</div><div class="ds">${G.Cal.canClaim() ? '¡Tienes un premio por reclamar!' : 'Vuelve mañana'}</div></div><button class="btn sm" data-act="go" data-v="cal">Ver</button></div>
       <div class="item"><div class="meta"><div class="nm">Sonido</div></div><button class="btn sm" data-act="mute">${G.S.muted ? '🔇 Activar' : '🔊 Silenciar'}</button></div>
+      <div class="sec">Mapa</div>
+      <div class="item"><div style="font-size:28px">${G.mapId === 'valle' ? '🏞️' : '🏖️'}</div><div class="meta"><div class="nm">${G.mapId === 'valle' ? 'Valle del Pescador' : 'Costa del Sol'}</div><div class="ds">${G.mapId === 'valle' ? 'Estaciones, río, lago y pueblo' : 'El mapa original de la costa'} · tu dinero, equipo y peces se conservan</div></div><button class="btn sm" data-act="switchmap">${G.mapId === 'valle' ? 'Ir a la costa' : 'Ir al valle'}</button></div>
       <div class="sec">Código de regalo</div>
       <div class="item"><input id="codeIn" class="codein" type="text" placeholder="Escribe tu código" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24"><button class="btn sm" data-act="redeem">Canjear</button></div>
       <div class="sec">Cómo se juega</div>
@@ -451,6 +475,7 @@ G.UI = (function () {
       if (gift.money) S.money = Math.round((S.money + gift.money) * 100) / 100;
       G.Audio.play('coin'); UI.toast('🎁 ¡Código canjeado! +' + U.money(gift.money), 'good'); UI.refreshHud(); G.save(); return render();
     }
+    if (act === 'switchmap') { close(); G.setMap(G.mapId === 'valle' ? 'costa' : 'valle', true); G.save(); UI.toast(G.mapId === 'valle' ? '🏞️ Bienvenido al Valle del Pescador' : '🏖️ De vuelta a la Costa del Sol', 'good'); return; }
     if (act === 'mute') { G.Audio.setMuted(!S.muted); return render(); }
     if (act === 'reset') {
       if (ms.confirmReset) { G.resetGame(); location.reload(); return; }

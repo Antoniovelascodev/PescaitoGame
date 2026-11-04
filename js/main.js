@@ -12,16 +12,24 @@ window.G = window.G || {};
   const cam = { x: 520, y: 1000 };
   let vw = 0, vh = 0, dpr = 1, zoom = 1, baseZoom = 1, uz = 1;
   try { uz = U.clamp(parseFloat(localStorage.getItem('pesca-zoom')) || 1, 0.85, 2.2); } catch (e) {}
-  function setUz(v) { uz = U.clamp(v, 0.85, 2.2); zoom = baseZoom * uz; try { localStorage.setItem('pesca-zoom', uz.toFixed(2)); } catch (e) {} }
+  /* Gráficos retro: el lienzo se dibuja a baja resolución (1 píxel de arte = 2 px del mundo) y se amplía sin suavizar */
+  G.retro = (function () { try { return localStorage.getItem('pesca-gfx') !== 'smooth'; } catch (e) { return true; } })();
+  G.setRetro = (on) => { G.retro = !!on; try { localStorage.setItem('pesca-gfx', on ? 'retro' : 'smooth'); } catch (e) {} resize(); };
+  function setUz(v) { uz = U.clamp(v, 0.85, 2.2); zoom = baseZoom * uz; try { localStorage.setItem('pesca-zoom', uz.toFixed(2)); } catch (e) {} resize(); }
   G.zoomBy = (m) => setUz(uz * m);
   let running = false;
 
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, G.dprCap || 2);
     vw = window.innerWidth; vh = window.innerHeight;
-    canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
-    dark.width = canvas.width; dark.height = canvas.height;
     baseZoom = U.clamp(Math.min(vw / 560, vh / 640), 0.55, 1.35); zoom = baseZoom * uz;
+    if (G.retro) {
+      const A = Math.max(2, Math.round(zoom * 2));      // px de pantalla por píxel de arte (entero para que no tiemble)
+      zoom = A / 2; dpr = 1 / A;
+    } else dpr = Math.min(window.devicePixelRatio || 1, G.dprCap || 2);
+    canvas.width = Math.ceil(vw * dpr); canvas.height = Math.ceil(vh * dpr);
+    canvas.classList.toggle('pix', !!G.retro);
+    ctx.imageSmoothingEnabled = !G.retro;
+    dark.width = canvas.width; dark.height = canvas.height;
   }
   document.getElementById('btnZoomIn').addEventListener('click', () => G.zoomBy(1.2));
   document.getElementById('btnZoomOut').addEventListener('click', () => G.zoomBy(1 / 1.2));
@@ -34,6 +42,7 @@ window.G = window.G || {};
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', () => setTimeout(resize, 200));
   resize();
+  G.Pix.watchEmoji();
 
   /* ---------- Tiempo ---------- */
   function updateNight() {
@@ -51,17 +60,18 @@ window.G = window.G || {};
     G.S.time = G.env.hour; updateNight();
     G.S.gt = (G.S.gt || 0) + hrs;
     G.Stall.tick(hrs);
-    if (G.env.hour < prev) newDay();
+    if (G.env.hour < prev && G.mapId === 'costa') newDay();
   };
 
   /* Medianoche: cambia el día (nuevo encargo del marinero y el mar puede cambiar) */
   function newDay() {
     const S = G.S;
     S.day++; S.dayLog = { fish: 0 };
-    S.swell = U.clamp(S.swell + U.pick([-1, 0, 0, 1, 1]), 0, 3);
-    G.Audio.setSwell(S.swell);
+    if (G.mapId === 'costa') { S.swell = U.clamp(S.swell + U.pick([-1, 0, 0, 1, 1]), 0, 3); G.Audio.setSwell(S.swell); }
     G.save();
   }
+  G.newDay = newDay;
+  G.snapCam = () => { cam.x = G.P.x; cam.y = G.P.y; };
 
   /* Sin aire en el mar: te sacan los socorristas, pagas el rescate y apareces en el paseo */
   G.rescue = function () {
@@ -89,9 +99,14 @@ window.G = window.G || {};
     if (G.Fish.busy()) return null;
     const S = G.S, p = G.P;
     // el marinero del puerto
-    if (G.Sailor.near(p)) return { label: '⚓ Hablar con el marinero', run: () => G.UI.open('sailor') };
+    if (G.mapId === 'costa' && G.Sailor.near(p)) return { label: '⚓ Hablar con el marinero', run: () => G.UI.open('sailor') };
+    if (G.mapId === 'valle') {
+      const npc = W.nearNpc(p);
+      if (npc) return { label: '💬 Hablar con ' + npc.name, run: () => W.talk(npc) };
+      if (U.dist(p.x, p.y, W.CHEST.x, W.CHEST.y) < 64) return { label: '🧰 Abrir el cofre', run: () => W.openChest() };
+    }
     // tiendas físicas del paseo
-    const sh = W.buildings.find(b => b.label && p.x > b.x - 6 && p.x < b.x + b.w + 6 && p.y > W.PROM_Y1 - 120);
+    const sh = W.shopAt ? W.shopAt(p) : W.buildings.find(b => b.label && p.x > b.x - 6 && p.x < b.x + b.w + 6 && p.y > W.PROM_Y1 - 120);
     if (sh) {
       if (sh.kind === 'castle') return { label: '🏰 Castillo Sohail', run: () => G.UI.toast('🏰 Castillo de Sohail (s. X): fortaleza mora sobre el cerro de Fuengirola. ¡Qué vistas!', 'good') };
       const gear = ['bait', 'rods', 'spear', 'paddle', 'kayak', 'animal'].includes(sh.kind);
@@ -151,6 +166,7 @@ window.G = window.G || {};
     if (paused) return;
     if (G.Interior.active) { G.Interior.update(dt); return; }
 
+    if (G.mapId === 'valle' && E.hour >= 2 && E.hour < 5.5) { G.Home.passOut(); return; }
     // reloj continuo: de día 1 hora de juego = 30 s; de noche (21:00-06:00) = 7,5 s
     { const hh = E.hour; G.addTime(dt / (hh >= 21 || hh < 6 ? 7.5 : 30)); }
     W.updateSchools(E.t, G.Fish.state !== 'idle' ? G.Fish.target : null);
@@ -170,7 +186,7 @@ window.G = window.G || {};
       const okx = ok(nx, P.y), oky = ok(P.x, ny);
       if (okx) P.x = nx;
       if (oky) P.y = ny;
-      if (!okx || !oky) G.Social.blocked(!okx ? nx : P.x, !oky ? ny : P.y);
+      if ((!okx || !oky) && G.mapId === 'costa') G.Social.blocked(!okx ? nx : P.x, !oky ? ny : P.y);
       P.ang = Math.atan2(I.y, I.x); P.moving = true; P.walk += dt * 10 * I.mag;
     } else if ((st === 'wait' || st === 'nibble')) {
       // mirando al corcho
@@ -179,7 +195,7 @@ window.G = window.G || {};
     // que la tabla no quede varada en tierra al cambiar de sitio
     G.Fish.update(dt);
 
-    G.Social.update(dt);
+    if (G.mapId === 'costa') G.Social.update(dt);
     G.Sailor.update(dt);
     G.Stall.update(dt);
 
@@ -189,7 +205,7 @@ window.G = window.G || {};
     G.UI.setCtx(c ? c.label : null);
 
     // lugar actual
-    const zn = W.zoneAt(P.x);
+    const zn = W.zoneAt(P.x, P.y);
     let spot = zn.name;
     if (S.onPaddle) spot = `🏄 En la tabla · ${Math.round(W.depthAt(P.x, P.y))} m de la orilla`;
     else if (W.inPier(P.x, P.y, 4)) spot = 'Espigón en T';
@@ -198,7 +214,7 @@ window.G = window.G || {};
     G.UI.syncButtons();
 
     // tutorial
-    if (S.tutorial === 0 && W.shoreY(P.x) - P.y < 60 && P.y < W.shoreY(P.x) + 100) { S.tutorial = 1; G.UI.toast('Mantén 🎣 LANZAR y suelta para lanzar al mar. Mueve el joystick para apuntar.'); }
+    if (S.tutorial === 0 && (W.nearWater ? W.nearWater(P) : W.shoreY(P.x) - P.y < 60 && P.y < W.shoreY(P.x) + 100)) { S.tutorial = 1; G.UI.toast('Mantén 🎣 LANZAR y suelta para lanzar al mar. Mueve el joystick para apuntar.'); }
     if (S.tutorial === 1 && G.Fish.state === 'bite') { S.tutorial = 2; G.UI.toast('¡Pica! Pulsa ⚡ ¡CLAVAR! rápido', 'good'); }
     if (S.tutorial === 2 && G.Fish.state === 'fight') { S.tutorial = 3; G.UI.toast('Mantén 🌀 RECOGE. Si el pez tira (⚠️), ¡suelta!', 'good'); }
 
@@ -224,7 +240,8 @@ window.G = window.G || {};
     }
     c.scale(G.PS, G.PS);
     if (!S.onPaddle) { c.fillStyle = 'rgba(0,0,0,0.25)'; c.beginPath(); c.ellipse(3, 6, 15, 12, 0, 0, 6.3); c.fill(); }
-    G.Char.legs(c, L, { ang: P.ang, walk: P.walk, moving: P.moving && !act, seated: S.onPaddle });
+    const pixBody = G.retro && !act && !S.onPaddle;
+    if (!pixBody) G.Char.legs(c, L, { ang: P.ang, walk: P.walk, moving: P.moving && !act, seated: S.onPaddle });
     // caña
     const using = F.state !== 'idle' && F.state !== 'result';
     const dtR = Math.min(0.1, Math.max(0, t - (P.rodT || t))); P.rodT = t;
@@ -253,7 +270,8 @@ window.G = window.G || {};
       const fishing = F.state !== 'idle' && F.state !== 'result';
       if (rk > 0.45) hands = { r: { x: dx * 13.5 - dy * 2, y: dy * 13.5 + dx * 2 }, l: fishing ? { x: dx * 26 + dy * 2, y: dy * 26 - dx * 2 } : null };
     }
-    G.Char.body(c, L, { ang: P.ang, walk: P.walk, moving: P.moving && !act, hands, twist });
+    if (pixBody) { c.save(); c.scale(1 / G.PS, 1 / G.PS); G.Pix.drawAt(c, G.Pix.person(L, G.Pix.dirOf(P.ang), G.Pix.frameOf(P.walk, P.moving)), 0, 11); c.restore(); }
+    else G.Char.body(c, L, { ang: P.ang, walk: P.walk, moving: P.moving && !act, hands, twist });
     c.restore();
     // estela en la tabla
     if (S.onPaddle && P.moving) {
@@ -332,19 +350,17 @@ window.G = window.G || {};
     cam.y = U.clamp(cam.y, vh / 2 / zoom, G.WORLD.h - vh / 2 / zoom);
     const vis = { x0: cam.x - vw / 2 / zoom - 20, x1: cam.x + vw / 2 / zoom + 20, y0: cam.y - vh / 2 / zoom - 20, y1: cam.y + vh / 2 / zoom + 20 };
 
-    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, (vw / 2 - cam.x * zoom) * dpr, (vh / 2 - cam.y * zoom) * dpr);
+    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, G.retro ? Math.round((vw / 2 - cam.x * zoom) * dpr) : (vw / 2 - cam.x * zoom) * dpr, G.retro ? Math.round((vh / 2 - cam.y * zoom) * dpr) : (vh / 2 - cam.y * zoom) * dpr);
     W.drawSea(ctx, vis, E);
     F.drawUnder(ctx);
     W.drawLand(ctx, vis, E);
     W.drawBuoys(ctx, vis, E);
-    drawBoardOnSand(ctx);
-    G.Stall.draw(ctx, vis, E);
-    G.Sailor.draw(ctx, E);
+    if (G.mapId === 'costa') { drawBoardOnSand(ctx); G.Stall.draw(ctx, vis, E); G.Sailor.draw(ctx, E); }
     drawPlayer(ctx);
     if (P.act) G.Char.drawAct(ctx, P, P.act);
     F.draw(ctx);
     W.drawTall(ctx, vis, E);
-    G.Social.draw(ctx, E);
+    if (G.mapId === 'costa') G.Social.draw(ctx, E);
     drawNight(ctx);
   }
 
@@ -402,8 +418,10 @@ window.G = window.G || {};
   function start() {
     G.TEX.init(ctx);
     const had = G.load();
-    G.env.hour = G.S.time; G.env.swell = G.env.swellF = G.S.swell; updateNight();
     G.P.x = G.S.pos.x; G.P.y = G.S.pos.y;
+    G.setMap(G.S.map || 'costa', !had);
+    if (!had && G.S.map === 'valle') G.S.time = 8;
+    G.env.hour = G.S.time; G.env.swell = G.env.swellF = G.S.swell; updateNight();
     if (G.S.onPaddle && !W.canPaddle(G.P.x, G.P.y)) G.S.onPaddle = false;
     if (!G.S.onPaddle) { const fs = W.freeSpot(G.P.x, G.P.y); G.P.x = fs.x; G.P.y = fs.y; }
     cam.x = G.P.x; cam.y = G.P.y;
