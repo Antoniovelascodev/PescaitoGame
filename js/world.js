@@ -132,10 +132,10 @@ G.World = (function () {
   /* Toallas: rectángulo girado (18 x 30) algo ensanchado para el personaje */
   function hitTowel(x, y) {
     for (const u of towels) {
-      if (Math.abs(u.x - x) > 24 || Math.abs(u.y - y) > 24) continue;
+      if (Math.abs(u.x - x) > 40 || Math.abs(u.y - y) > 40) continue;
       const dx = x - u.x, dy = y - u.y, ca = Math.cos(-u.a), sa = Math.sin(-u.a);
       const lx = dx * ca - dy * sa, ly = dx * sa + dy * ca;
-      if (Math.abs(lx) < 9 + 6 && Math.abs(ly) < 15 + 6) return u;
+      if (Math.abs(lx) < 9 * 1.5 + 6 && Math.abs(ly) < 15 * 1.5 + 6) return u;
     }
     return null;
   }
@@ -176,14 +176,14 @@ G.World = (function () {
   const umbrellas = [];
   const towels = [];
   const umbCols = ['#e8503a', '#f2b632', '#2f9fd8', '#ffffff', '#e86a9a', '#3fbf86'];
-  const DENS = { sand: 1 / 46, rock: 1 / 280, nude: 1 / 110, stone: 1 / 170 };
+  const DENS = { sand: 1 / 125, rock: 1 / 380, nude: 1 / 210, stone: 1 / 280 };
   for (const z of ZONES) {
     const dens = DENS[z.beach]; if (!dens) continue;
     const n = Math.round((z.x1 - z.x0) * dens);
     for (let i = 0; i < n; i++) {
       const x = z.x0 + 24 + rng() * (z.x1 - z.x0 - 48);
       const y = shoreY(x) + (z.prom === 'paseo' ? 70 + rng() * 190 : 40 + rng() * 80);
-      umbrellas.push({ x, y, r: 16 + rng() * 6, c: U.pick(umbCols), c2: U.pick(umbCols) });
+      umbrellas.push({ x, y, r: (16 + rng() * 6) * 1.25, c: U.pick(umbCols), c2: U.pick(umbCols) });
       towels.push({ x: x + 26 + rng() * 14, y: y + rng() * 20 - 8, a: rng() * 0.8 - 0.4, c: U.pick(umbCols), nude: z.beach === 'nude' });
     }
   }
@@ -265,8 +265,8 @@ G.World = (function () {
   const HAIR = ['#2a1d14', '#5a3a22', '#c9a24a', '#111', '#8a8a8a'];
   const people = [];
   const beachX = sampler(z => z.beach === 'sand' || z.beach === 'nude' || z.beach === 'stone'), promX = sampler(z => z.prom === 'paseo' || z.prom === 'wood');
-  for (let i = 0; i < 120; i++) {
-    const beach = i % 5 < 2;
+  for (let i = 0; i < 52; i++) {
+    const beach = i % 4 < 1;
     const cx = beach ? beachX(rngP) : promX(rngP);
     people.push({ nude: beach && zoneAt(cx).beach === 'nude',
       beach, cx, rx: beach ? 70 + rngP() * 200 : 90 + rngP() * 380, off: beach ? 22 + rngP() * 40 : PROM_Y0 + 34 + rngP() * 70,
@@ -287,7 +287,26 @@ G.World = (function () {
     if (hour < p.lv) return Math.min(1, (hour - p.arr) / 0.25);
     return 1 - U.clamp(((hour - p.lv) / EXIT_DUR - 0.55) / 0.45, 0, 1);
   }
+  const PANTS = ['#1c2b4a', '#b59a63', '#3a62a0', '#22242a', '#d8342c', '#ef7ab0', '#2f6b3b'], SHOES = ['#6b4226', '#f4f4f4', '#2d9cdb', '#d8342c', '#22242a'];
+  function personLook(p) {
+    if (p.look) return p.look;
+    const n = Math.floor(p.ph * 10), nude = p.nude, short = p.beach || p.nude;
+    return (p.look = {
+      skin: p.skin, hair: p.hair, shirt: { id: 'p' + p.shirt, color: nude ? p.skin : p.shirt, style: 'plain' },
+      pants: { id: 'q' + n + (short ? 's' : 'l') + (nude ? 'n' : ''), color: nude ? p.skin : PANTS[n % PANTS.length], short },
+      shoes: { id: 'z' + n, color: SHOES[n % SHOES.length], type: p.beach ? 'flip' : 'shoe' },
+      hat: n % 4 === 0 ? { id: 'h' + n, type: 'cap', color: SHIRT[n % SHIRT.length] } : n % 7 === 1 ? { id: 'hs' + n, type: 'straw', color: '#e8cf8a', band: '#c0392b' } : { id: 'hn', type: 'none' },
+    });
+  }
   function drawPerson(ctx, x, y, hd, t, p, al, sc) {
+    if (G.retro && G.Pix) {
+      // sprite pixel del mismo tamaño que el jugador
+      ctx.save(); ctx.globalAlpha = al;
+      ctx.fillStyle = 'rgba(0,18,30,.26)'; ctx.fillRect(Math.round(x) - 12, Math.round(y) + 12, 24, 4); ctx.fillRect(Math.round(x) - 8, Math.round(y) + 16, 16, 2);
+      const spr = G.Pix.person(personLook(p), G.Pix.dirOf(hd), G.Pix.frameOf(t * 6 + p.ph * 5, true));
+      G.Pix.drawAt(ctx, spr, x, y + 15);
+      ctx.restore(); return;
+    }
     ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y); ctx.scale(sc, sc);
     ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(3, 5, 11, 9, 0, 0, 6.3); ctx.fill();
     ctx.rotate(hd);
@@ -938,6 +957,19 @@ G.World = (function () {
   }
 
   function drawBuoys(ctx, vis, env) {
+    // barcos pesqueros que cruzan el mar más allá de las boyas
+    { const t = env.t, span = WD.w + 600;
+      for (let k = 0; k < 5; k++) {
+        const dirn = k % 2 ? -1 : 1, bx = dirn > 0 ? ((t * (16 + k * 3) + k * 2100) % span) - 300 : span - ((t * (14 + k * 3) + k * 1700) % span) - 300, by = 60 + k * 26 + Math.sin(t * 0.5 + k) * 3;
+        if (bx < vis.x0 - 80 || bx > vis.x1 + 80 || by < vis.y0 - 60 || by > vis.y1 + 60) continue;
+        ctx.save(); ctx.translate(Math.round(bx), Math.round(by)); ctx.scale(dirn, 1);
+        ctx.fillStyle = 'rgba(255,255,255,.45)'; for (let w = 0; w < 5; w++) ctx.fillRect(-46 - w * 14, 6 + (w % 2) * 4, 10, 2);
+        ctx.fillStyle = '#2b1a0c'; ctx.fillRect(-30, 0, 62, 14); ctx.fillRect(32, 2, 6, 8);
+        ctx.fillStyle = ['#c0392b', '#2d6fc4', '#2f9e5b', '#e0a020', '#7a5ad8'][k]; ctx.fillRect(-28, 2, 58, 10); ctx.fillStyle = '#f4f1e6'; ctx.fillRect(-28, 8, 58, 4);
+        ctx.fillStyle = '#2b1a0c'; ctx.fillRect(-14, -14, 22, 14); ctx.fillStyle = '#f4f1e6'; ctx.fillRect(-12, -12, 18, 12); ctx.fillStyle = '#6cb0e0'; ctx.fillRect(-9, -9, 5, 5); ctx.fillRect(-1, -9, 5, 5);
+        ctx.fillStyle = '#2b1a0c'; ctx.fillRect(14, -22, 3, 22); ctx.fillRect(2, -22, 24, 3); ctx.fillStyle = '#d8d0b0'; ctx.fillRect(15, -20, 1, 20);
+        ctx.restore();
+      } }
     const t = env.t, y0 = G.BUOY_Y;
     if (vis.y0 > y0 + 60 || vis.y1 < y0 - 60) return;
     const x1 = PORT_FENCE_X - 20;
@@ -975,7 +1007,7 @@ G.World = (function () {
     const t = env.t;
     for (const u of towels) {
       if (u.x < vis.x0 - 40 || u.x > vis.x1 + 40 || u.y < vis.y0 - 40 || u.y > vis.y1 + 40) continue;
-      ctx.save(); ctx.translate(u.x, u.y); ctx.rotate(u.a);
+      ctx.save(); ctx.translate(u.x, u.y); ctx.rotate(u.a); ctx.scale(1.5, 1.5);
       ctx.fillStyle = u.c; ctx.fillRect(-9, -15, 18, 30);
       ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(-9, -5, 18, 3); ctx.fillRect(-9, 4, 18, 3);
       ctx.restore();
@@ -997,7 +1029,7 @@ G.World = (function () {
     }
     for (const tw of towels) {
       if (!tw.lie || hour < tw.arr || hour > tw.lv + 0.3 || tw.x < vis.x0 - 40 || tw.x > vis.x1 + 40 || tw.y < vis.y0 - 40 || tw.y > vis.y1 + 40) continue;
-      ctx.save(); ctx.translate(tw.x, tw.y); ctx.rotate(tw.a);
+      ctx.save(); ctx.translate(tw.x, tw.y); ctx.rotate(tw.a); ctx.scale(1.6, 1.6);
       ctx.globalAlpha = U.clamp(Math.min((hour - tw.arr) / 0.3, (tw.lv + 0.3 - hour) / 0.3), 0, 1);
       ctx.fillStyle = tw.skin; ctx.beginPath(); ctx.ellipse(0, 3, 4.4, 10.5, 0, 0, 6.3); ctx.fill();
       if (!tw.nude) { ctx.fillStyle = tw.suit; ctx.fillRect(-4.4, 1, 8.8, 6); }

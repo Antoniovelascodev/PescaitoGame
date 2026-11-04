@@ -291,3 +291,6 @@ canvas#game.pix { image-rendering: pixelated; image-rendering: crisp-edges; imag
 .sheet h2 .pxi.inl { width: 28px; height: 28px; vertical-align: -0.45em; }
 .item > div[style*="font-size:3"] .pxi.inl, .item > div[style*="font-size:2"] .pxi.inl { width: 42px; height: 42px; margin: 0; }
 .tab .pxi.inl { width: 22px; height: 22px; vertical-align: -0.4em; }
+
+#hSpot { align-self: flex-start; background: #3b2412; color: #fff2c8; padding: 3px 9px; font-size: 12px; text-shadow: none; box-shadow: 0 -2px 0 #2b1a0c, 0 2px 0 #2b1a0c, -2px 0 0 #2b1a0c, 2px 0 0 #2b1a0c, inset 0 2px 0 rgba(255,222,150,.25); margin-left: 4px; }
+#hSpot:empty { display: none; }

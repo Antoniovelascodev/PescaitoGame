@@ -338,14 +338,18 @@ window.G = window.G || {};
     if (G.Interior.active) { G.Interior.draw(ctx, vw, vh, dpr); return; }
     const P = G.P, F = G.Fish, E = G.env;
     // cámara
-    let tx = P.x, ty = P.y;
+    // La cámara sigue al jugador casi pegada (sin balanceo); al pescar se desplaza solo un poco hacia el corcho y muy suavemente
+    let lx = 0, ly = 0;
     if (F.state === 'charge' || F.state === 'wait' || F.state === 'nibble' || F.state === 'bite' || F.state === 'fight' || F.state === 'cast') {
       const T = F.state === 'charge' ? { x: P.x + Math.cos(F.aim) * G.rod().reach * PXM * 0.5 * (0.4 + F.power * 0.6), y: P.y + Math.sin(F.aim) * G.rod().reach * PXM * 0.5 * (0.4 + F.power * 0.6) } : F.target;
-      tx = (P.x + T.x) / 2; ty = (P.y + T.y) / 2;
+      lx = (T.x - P.x) * 0.28; ly = (T.y - P.y) * 0.28;
     }
-    ty -= (vh / zoom) * 0.07;
-    const k = Math.min(1, dt * 3.2);
+    const kl = 1 - Math.exp(-dt * 2.2);
+    cam.lx = (cam.lx || 0) + (lx - (cam.lx || 0)) * kl; cam.ly = (cam.ly || 0) + (ly - (cam.ly || 0)) * kl;
+    const tx = P.x + cam.lx, ty = P.y + cam.ly - (vh / zoom) * 0.04;
+    const k = 1 - Math.exp(-dt * 11);
     cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
+    if (G.retro) { cam.x = Math.round(cam.x / 2) * 2; cam.y = Math.round(cam.y / 2) * 2; }
     cam.x = U.clamp(cam.x, vw / 2 / zoom, G.WORLD.w - vw / 2 / zoom);
     cam.y = U.clamp(cam.y, vh / 2 / zoom, G.WORLD.h - vh / 2 / zoom);
     const vis = { x0: cam.x - vw / 2 / zoom - 20, x1: cam.x + vw / 2 / zoom + 20, y0: cam.y - vh / 2 / zoom - 20, y1: cam.y + vh / 2 / zoom + 20 };

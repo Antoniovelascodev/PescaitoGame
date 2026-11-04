@@ -19,6 +19,7 @@ G.Pix = (function () {
   const GL = {
     A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101', I: '111010010010111', J: '001001001101010', K: '101101110101101', L: '100100100100111', M: '101111111101101', N: '110101101101101', O: '010101101101010', P: '110101110100100', Q: '010101101111011', R: '110101110101101', S: '011100010001110', T: '111010010010010', U: '101101101101111', V: '101101101101010', W: '101101111111101', X: '101101010101101', Y: '101101010010010', Z: '111001010100111',
     0: '111101101101111', 1: '010110010010111', 2: '110001010100111', 3: '110001010001110', 4: '101101111001001', 5: '111100110001110', 6: '011100111101111', 7: '111001010010010', 8: '111101111101111', 9: '111101111001110',
+    '¡': '010000010010010', '¿': '010000010100010', "'": '010010000000000', '"': '101101000000000', '(': '001010010010001', ')': '100010010010100', ';': '000010000010100', '=': '000111000111000', '€': '011110110110011', '#': '101111101111101', '*': '000101010101000', '_': '000000000000111', '&': '010101010101011', '→': '000010111010000', '×': '000101010101000',
     '.': '000000000000010', '-': '000000111000000', ':': '000010000010000', '·': '000000010000000', '!': '010010010000010', '?': '110001010000010', '/': '001001010100100', '%': '101001010100101', '+': '000010111010000', ',': '000000000010100',
   };
   const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
@@ -38,6 +39,27 @@ G.Pix = (function () {
     P.text(g, s, 1, 1, col || '#fff');
     ctx.drawImage(c, Math.round(x - (w + 2) * K / 2), Math.round(y), c.width * K, c.height * K);
   };
+  /* Todo el texto de los lienzos (rótulos, globos de diálogo, avisos flotantes) se dibuja con la fuente pixel para que se lea con nitidez */
+  (function () {
+    const proto = CanvasRenderingContext2D.prototype, _fill = proto.fillText, _stroke = proto.strokeText, _measure = proto.measureText;
+    const fpx = (f) => { const m = /(\d+(?:\.\d+)?)px/.exec(f || ''); return m ? parseFloat(m[1]) : 12; };
+    const unit = (ctx) => K * Math.max(1, Math.round(fpx(ctx.font) / 12));
+    const tc = {}; let tn = 0;
+    const spr = (s, col) => { const k = s + '|' + col; if (tc[k]) return tc[k]; if (++tn > 700) { for (const q in tc) delete tc[q]; tn = 0; } const w = P.textW(s) , [c, g] = mk(Math.max(1, w), 5); P.text(g, s, 0, 0, col); return (tc[k] = c); };
+    const place = (ctx, str, x, y) => { const u = unit(ctx), w = P.textW(str) * u, a = ctx.textAlign, b = ctx.textBaseline; return { u, x: Math.round(a === 'center' ? x - w / 2 : (a === 'right' || a === 'end') ? x - w : x), y: Math.round(b === 'middle' ? y - 2.5 * u : (b === 'top' || b === 'hanging') ? y : y - 5 * u) }; };
+    proto.fillText = function (s, x, y, mw) {
+      if (!G.retro || typeof this.fillStyle !== 'string') return _fill.apply(this, arguments);
+      const str = String(s); if (!str) return; const o = place(this, str, x, y), sp = spr(str, this.fillStyle);
+      const sv = this.imageSmoothingEnabled; this.imageSmoothingEnabled = false; this.drawImage(sp, o.x, o.y, sp.width * o.u, 5 * o.u); this.imageSmoothingEnabled = sv;
+    };
+    proto.strokeText = function (s, x, y) {
+      if (!G.retro || typeof this.strokeStyle !== 'string') return _stroke.apply(this, arguments);
+      const str = String(s); if (!str) return; const o = place(this, str, x, y), sp = spr(str, this.strokeStyle), sv = this.imageSmoothingEnabled; this.imageSmoothingEnabled = false;
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]]) this.drawImage(sp, o.x + dx * o.u, o.y + dy * o.u, sp.width * o.u, 5 * o.u);
+      this.imageSmoothingEnabled = sv;
+    };
+    proto.measureText = function (s) { if (!G.retro) return _measure.apply(this, arguments); const str = String(s), w = P.textW(str) * unit(this); return { width: w, actualBoundingBoxAscent: 5 * unit(this), actualBoundingBoxDescent: 0, actualBoundingBoxLeft: 0, actualBoundingBoxRight: w }; };
+  })();
   const tcache = {};
   P.textSprite = (s, col, sh) => { const k = s + col + sh; if (tcache[k]) return tcache[k]; const w = P.textW(s), [c, g] = mk(w + 2, 7); P.text(g, s, 0, 1, sh); P.text(g, s, 2, 1, sh); P.text(g, s, 1, 0, sh); P.text(g, s, 1, 2, sh); P.text(g, s, 1, 1, col); return (tcache[k] = c); };
 

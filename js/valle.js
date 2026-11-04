@@ -317,6 +317,53 @@ window.G = window.G || {};
     paco: { skin: '#c68863', hair: '#3a2a1c', shirt: { id: 'n3', color: '#6b8f5a', style: 'plain' }, pants: { id: 'n3', color: '#b59a63' }, shoes: { id: 'n3', color: '#6b4226', type: 'shoe' }, hat: { id: 'n3', type: 'straw', color: '#e8cf8a', band: '#c0392b' } },
     ines: { skin: '#8d5a3b', hair: '#151515', shirt: { id: 'n4', color: '#e0b030', color2: '#ffffff', style: 'hawaii' }, pants: { id: 'n4', color: '#d8342c', short: true }, shoes: { id: 'n4', color: '#2d9cdb', type: 'flip' }, hat: { id: 'n4', type: 'none' } },
   };
+  /* Gente del pueblo que va y viene por los caminos, y pescadores en la orilla */
+  const SKINS = ['#f9c9a2', '#e8b088', '#c98d62', '#8d5a3b', '#f2c9a0'], HAIRS = ['#6a3d1a', '#2a1d14', '#c9a24a', '#151515', '#a8a8a8', '#8a3a1a'], SHIRTS = ['#e0463a', '#2f7fd0', '#3f9a5c', '#f4c430', '#7a5ad8', '#e86a9a', '#f08a3c', '#2b3a55', '#38b6a6'], PANT = ['#1c2b4a', '#b59a63', '#3a62a0', '#22242a', '#6a4a2a', '#4a6a3a'];
+  const walkers = (function () {
+    const r = U.rng(515), out = [];
+    const routes = [[[9, 35.6], [56, 35.6]], [[14, 36.7], [49, 36.7]], [[30, 38], [30, 52]], [[24, 35.4], [68, 36.6]], [[70, 37], [86, 37]], [[80.4, 27], [80.4, 40]], [[11, 47], [28, 47]], [[40, 35.3], [8, 35.3]]];
+    for (let i = 0; i < routes.length; i++) {
+      const [a, b] = routes[i], n = Math.floor(r() * 90);
+      out.push({ id: i, a: [a[0] * TS, a[1] * TS], b: [b[0] * TS, b[1] * TS], sp: 24 + r() * 22, ph: r() * 100,
+        look: { skin: SKINS[n % 5], hair: HAIRS[n % 6], shirt: { id: 'w' + i, color: SHIRTS[(n + i) % SHIRTS.length], style: 'plain' }, pants: { id: 'w' + i, color: PANT[n % PANT.length] }, shoes: { id: 'w' + i, color: '#6b4226', type: 'shoe' }, hat: i % 3 === 0 ? { id: 'w' + i, type: 'cap', color: SHIRTS[(n + 3) % SHIRTS.length] } : i % 3 === 1 ? { id: 'w' + i, type: 'straw', color: '#e8cf8a', band: '#c0392b' } : { id: 'w' + i, type: 'none' } } });
+    }
+    return out;
+  })();
+  function walkerAt(w, t) {
+    const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), cyc = len / w.sp, dwell = 3.5, total = 2 * (cyc + dwell), u = (t + w.ph) % total;
+    let f, fwd = true, moving = true;
+    if (u < cyc) f = u / cyc; else if (u < cyc + dwell) { f = 1; moving = false; } else if (u < 2 * cyc + dwell) { f = 1 - (u - cyc - dwell) / cyc; fwd = false; } else { f = 0; moving = false; fwd = false; }
+    const x = w.a[0] + (w.b[0] - w.a[0]) * f, y = w.a[1] + (w.b[1] - w.a[1]) * f, ang = Math.atan2(w.b[1] - w.a[1], w.b[0] - w.a[0]) + (fwd ? 0 : Math.PI);
+    return { x, y, ang: moving ? ang : Math.PI / 2, moving };
+  }
+  function drawWalker(ctx, w, E) {
+    const p = walkerAt(w, E.t);
+    ctx.fillStyle = 'rgba(0,18,30,.26)'; ctx.fillRect(Math.round(p.x) - 12, Math.round(p.y) + 8, 24, 4); ctx.fillRect(Math.round(p.x) - 8, Math.round(p.y) + 12, 16, 2);
+    PX.drawAt(ctx, PX.person(w.look, PX.dirOf(p.ang), PX.frameOf(E.t * 6 + w.id, p.moving)), p.x, p.y + 14);
+  }
+  const anglers = (function () {
+    const out = [], defs = [['bosque', 3], ['rio_sur', 0], ['estanque', 1]];
+    for (const [id, k] of defs) {
+      const sp = SPOTS.find(s => s.id === id); if (!sp) continue;
+      let best = null;
+      for (const [dx, dy, dir] of [[1, 0, 3], [-1, 0, 2], [0, -1, 1], [0, 1, 0]]) for (let r = 40; r <= 130 && !best; r += 10) if (isWater(sp.x + dx * r, sp.y + dy * r)) { best = { dx, dy, dir, r }; }
+      if (!best) continue;
+      out.push({ x: sp.x - best.dx * 40 + (k * 17 % 30) - 15, y: sp.y - best.dy * 40, dx: best.dx, dy: best.dy, dir: best.dir, r: best.r + 20, ph: k * 5.3,
+        look: { skin: SKINS[k + 1], hair: HAIRS[k], shirt: { id: 'a' + k, color: ['#2f7fd0', '#3f9a5c', '#e0463a'][k % 3], style: 'plain' }, pants: { id: 'a' + k, color: '#4a6a3a' }, shoes: { id: 'a' + k, color: '#2f6b3b', type: 'boot' }, hat: { id: 'a' + k, type: 'bucket', color: ['#6b8f5a', '#c9a24a', '#8a8a8a'][k % 3] } } });
+    }
+    return out;
+  })();
+  function drawAngler(ctx, a, E) {
+    const t = E.t + a.ph, bx = a.x + a.dx * (a.r + 20), by = a.y + a.dy * (a.r + 20) + 6, bite = (t % 17) > 15, dip = bite ? 4 : Math.round(Math.sin(t * 2));
+    ctx.fillStyle = 'rgba(0,18,30,.26)'; ctx.fillRect(Math.round(a.x) - 12, Math.round(a.y) + 8, 24, 4);
+    PX.drawAt(ctx, PX.person(a.look, a.dir, 0), a.x, a.y + 14);
+    // caña y sedal
+    const hx = Math.round(a.x + a.dx * 16), hy = Math.round(a.y - 4 + a.dy * 8), tx = Math.round(a.x + a.dx * 34), ty = Math.round(a.y - 28 + a.dy * 10);
+    ctx.fillStyle = '#3b2412'; for (let k = 0; k <= 8; k++) ctx.fillRect(Math.round(hx + (tx - hx) * k / 8), Math.round(hy + (ty - hy) * k / 8), 3, 3);
+    ctx.fillStyle = '#e8e4d0'; for (let k = 1; k <= 12; k++) { const u = k / 12; ctx.fillRect(Math.round(tx + (bx - tx) * u), Math.round(ty + (by - ty) * u + Math.sin(u * 3.1) * -10), 2, 2); }
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(Math.round(bx) - 8, Math.round(by) + 4 + dip, 16, 2);
+    if (!bite || t % 0.4 < 0.2) { ctx.fillStyle = '#2b1a0c'; ctx.fillRect(Math.round(bx) - 3, Math.round(by) - 2 + dip, 6, 6); ctx.fillStyle = '#e8402a'; ctx.fillRect(Math.round(bx) - 2, Math.round(by) - 2 + dip, 4, 3); ctx.fillStyle = '#fff'; ctx.fillRect(Math.round(bx) - 2, Math.round(by) + 1 + dip, 4, 2); }
+  }
   function drawNpc(ctx, n, E) {
     const dx = G.P.x - n.x, dy = G.P.y - n.y, near = Math.hypot(dx, dy) < 150, dir = near ? PX.dirOf(Math.atan2(dy, dx)) : 0;
     const bob = near ? 0 : Math.round(Math.sin(E.t * 1.6 + n.ph) * 0.6);
@@ -353,6 +400,16 @@ window.G = window.G || {};
       const a = u / 0.3, hh = Math.sin(a * Math.PI) * 22;
       ctx.fillStyle = 'rgba(255,255,255,.7)'; const rr = Math.round(4 + a * 12); ctx.fillRect(Math.round(x) - rr, Math.round(y), rr * 2, 2);
       PX.drawAt(ctx, PX.fishJump(), x, y - hh);
+    }
+    // bandadas de pájaros que cruzan el valle (con su sombra en el suelo)
+    if (day > 0.3 && G.weather() !== 'rain') for (let k = 0; k < 4; k++) {
+      const span = MW * TS + 500, fx = ((t * (34 + k * 9) + k * 1100) % span) - 250, fy = 300 + hash(k, 9, 130) * (MH * TS - 600);
+      for (let b = 0; b < 3; b++) {
+        const x = fx - b * 26, y = fy + Math.sin(t * 0.9 + k + b) * 12 + b * 9, fl = Math.floor(t * 6 + b) % 2;
+        if (x < vis.x0 - 40 || x > vis.x1 + 40 || y < vis.y0 - 80 || y > vis.y1 + 80) continue;
+        ctx.fillStyle = 'rgba(0,18,30,.18)'; ctx.fillRect(Math.round(x), Math.round(y + 46), 10, 3);
+        ctx.fillStyle = '#2b1a0c'; if (fl) { ctx.fillRect(Math.round(x), Math.round(y), 4, 4); ctx.fillRect(Math.round(x) + 8, Math.round(y), 4, 4); ctx.fillRect(Math.round(x) + 4, Math.round(y) + 4, 4, 2); } else { ctx.fillRect(Math.round(x), Math.round(y) + 4, 4, 4); ctx.fillRect(Math.round(x) + 8, Math.round(y) + 4, 4, 4); ctx.fillRect(Math.round(x) + 4, Math.round(y), 4, 4); }
+      }
     }
     // lluvia
     if (G.weather() === 'rain') {
@@ -399,12 +456,16 @@ window.G = window.G || {};
     treeLayer(ctx, vis, sn, false);
     drawChest(ctx, E);
     for (const n of npcs) if (n.y <= py) drawNpc(ctx, n, E);
+    for (const a of anglers) if (a.y <= py) drawAngler(ctx, a, E);
+    for (const w of walkers) { const p = walkerAt(w, E.t); if (p.y <= py) drawWalker(ctx, w, E); }
   }
   function drawTall(ctx, vis, E) {
     const sn = G.season(), py = G.P.y;
     for (const b of buildings) if (b.x + b.w > vis.x0 && b.x < vis.x1 && b.y + b.h > vis.y0 - 60 && b.y < vis.y1 && b.y + b.h > py + 8) drawBuilding(ctx, b, E);
     drawDecor(ctx, vis, true);
     for (const n of npcs) if (n.y > py) drawNpc(ctx, n, E);
+    for (const a of anglers) if (a.y > py) drawAngler(ctx, a, E);
+    for (const w of walkers) { const p = walkerAt(w, E.t); if (p.y > py) drawWalker(ctx, w, E); }
     treeLayer(ctx, vis, sn, true);
     ambient(ctx, vis, E);
   }
