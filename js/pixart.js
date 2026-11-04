@@ -69,12 +69,55 @@ G.Pix = (function () {
     { b: '#a8963c', d: '#8c7a2e', l: '#c2b052', k: '#6e5e22' },
     { b: '#dde7ee', d: '#c0d0dc', l: '#f4f8fb', k: '#a9bccb' },
   ];
+  const mix = (a, b, f) => { const A = hex(a), B = hex(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * f).toString(16).padStart(2, '0')).join(''); };
+  /* v = tipo*4 + variante; tipo 0 normal, 1 frondosa (más oscura y con más hierba), 2 seca (más clara y amarillenta) */
   P.grass = (sn, v) => memo('g' + sn + v, () => {
-    const [c, x] = mk(16, 16), p = GR[sn]; rect(x, p.b, 0, 0, 16, 16);
-    for (let n = 0; n < 7; n++) dot(x, hash(v, n, 3) > 0.5 ? p.d : p.l, Math.floor(hash(v, n, 11) * 16), Math.floor(hash(v, n, 12) * 16));
-    for (let n = 0; n < 2; n++) { const i = 1 + Math.floor(hash(v, n, 21) * 12), j = 2 + Math.floor(hash(v, n, 22) * 12); dot(x, p.k, i, j + 1); dot(x, p.d, i + 1, j); dot(x, p.k, i + 2, j + 1); }
+    const [c, x] = mk(16, 16), ty = Math.floor(v / 4), vv = v % 4; let p = GR[sn];
+    if (ty === 1) p = { b: tone(p.b, -0.1), d: tone(p.d, -0.12), l: tone(p.l, -0.04), k: tone(p.k, -0.1) };
+    else if (ty === 2) { const dry = sn === 3 ? '#ffffff' : '#d8c860'; p = { b: mix(p.b, dry, 0.28), d: mix(p.d, dry, 0.2), l: mix(p.l, dry, 0.4), k: mix(p.k, dry, 0.15) }; }
+    rect(x, p.b, 0, 0, 16, 16);
+    for (let n = 0; n < 8 + ty * 2; n++) dot(x, hash(vv, n, 3 + ty) > 0.5 ? p.d : p.l, Math.floor(hash(vv, n, 11) * 16), Math.floor(hash(vv, n, 12 + ty) * 16));
+    for (let n = 0; n < 2 + (ty === 1 ? 2 : 0); n++) { const i = 1 + Math.floor(hash(vv, n, 21 + ty) * 12), j = 2 + Math.floor(hash(vv, n, 22 + ty) * 12); dot(x, p.k, i, j + 1); dot(x, p.d, i + 1, j); dot(x, p.k, i + 2, j + 1); if (ty === 1) dot(x, p.l, i + 1, j - 1); }
+    if (sn === 3 && ty !== 1) for (let n = 0; n < 3; n++) dot(x, '#ffffff', Math.floor(hash(vv, n, 25) * 16), Math.floor(hash(vv, n, 26) * 16));
     return c;
   });
+  /* mata de hierba alta que se mece con el viento (2 fotogramas) */
+  P.tuft = (sn, v, fr) => memo('T' + sn + v + fr, () => {
+    const [c, x] = mk(11, 9), p = sn === 3 ? { d: '#8fa8b8', m: '#c4d6e0', l: '#f4f8fb' } : sn === 2 ? { d: '#7a5e22', m: '#b08a30', l: '#d8b450' } : sn === 1 ? { d: '#2f6a22', m: '#4a9a34', l: '#7acb52' } : { d: '#3f8a2c', m: '#62b040', l: '#92d462' };
+    const blades = [[2, 7, -1], [4, 8, 0], [6, 8, 1], [8, 7, 1], [5, 8, 0]];
+    for (const [bx, by, lean] of blades) { const h = 4 + Math.floor(hash(v, bx, 61) * 3); for (let k = 0; k < h; k++) { const sx = bx + Math.round(lean * k * 0.45) + (fr ? Math.round(k * 0.35) : 0); dot(x, k === h - 1 ? p.l : (k % 2 ? p.m : p.d), sx, by - k); } }
+    return { cv: c, ax: 5, ay: 8 };
+  });
+  P.reed = (fr) => memo('R' + fr, () => {
+    const [c, x] = mk(9, 20);
+    for (const [bx, h] of [[2, 14], [4, 18], [6, 12]]) { for (let k = 0; k < h; k++) dot(x, k % 3 ? '#4f8a2e' : '#3a6e22', bx + (fr && k > h * 0.6 ? 1 : 0), 19 - k); const tx = bx + (fr ? 1 : 0); rect(x, '#3b2412', tx, 19 - h - 3, 2, 4); dot(x, '#7a4e2a', tx, 19 - h - 3); }
+    rect(x, '#3a6e22', 1, 19, 7, 1);
+    return { cv: c, ax: 4, ay: 19 };
+  });
+  P.lily = (v, fr) => memo('L' + v + fr, () => {
+    const [c, x] = mk(11, 8), b = P.blob(11, 6, (i, j) => ((i - 5) / 5) ** 2 + ((j - 3) / 2.6) ** 2 <= 1 && !(i >= 5 && i <= 6 && j <= 2 && fr), ['#9ae068', '#58b040', '#368a30', '#1f5428'], v + 4, [0, 0.6]); x.drawImage(b, 0, 2);
+    if (v % 3 === 0) { rect(x, '#ffffff', 4, 0, 3, 2); dot(x, '#ff9fc2', 5, 0); dot(x, '#ffe052', 5, 1); }
+    return { cv: c, ax: 5, ay: 5 };
+  });
+  P.shadowFish = (dir) => memo('S' + dir, () => {
+    const [c, x] = mk(12, 5); rect(x, 'rgba(10,40,70,.5)', 2, 1, 7, 3); rect(x, 'rgba(10,40,70,.5)', 0, 0, 3, 5); rect(x, 'rgba(10,40,70,.5)', 8, 2, 3, 1);
+    if (dir < 0) { const [m, g] = mk(12, 5); g.translate(12, 0); g.scale(-1, 1); g.drawImage(c, 0, 0); return { cv: m, ax: 6, ay: 2 }; }
+    return { cv: c, ax: 6, ay: 2 };
+  });
+  P.mushroom = (v) => memo('M' + v, () => {
+    const [c, x] = mk(7, 7); rect(x, '#f2ead0', 3, 4, 2, 3); rect(x, '#3b2412', 1, 1, 5, 1); rect(x, '#d03a2a', 1, 2, 5, 2); rect(x, '#e8604a', 2, 2, 2, 1); dot(x, '#ffffff', 2, 3); dot(x, '#ffffff', 4, 3);
+    if (v % 2) { rect(x, '#8a6a3a', 1, 2, 5, 2); rect(x, '#b08a50', 2, 2, 2, 1); dot(x, '#ffffff', 0, 0); dot(x, '#8a6a3a', 2, 3); dot(x, '#8a6a3a', 4, 3); }
+    return { cv: c, ax: 3, ay: 6 };
+  });
+  P.log = () => memo('log', () => {
+    const [c, x] = mk(24, 12);
+    shadow(x, 12, 10, 10, 2);
+    rect(x, '#2b1a0c', 1, 2, 22, 8); rect(x, '#7a4e2a', 2, 3, 20, 6); rect(x, '#9a6a3c', 2, 3, 20, 2); rect(x, '#5a3a1c', 2, 8, 20, 1); for (const i of [6, 11, 16]) dot(x, '#4a2e16', i, 5);
+    rect(x, '#2b1a0c', 0, 3, 3, 6); rect(x, '#c9a068', 1, 4, 1, 4); rect(x, '#e0c088', 1, 5, 1, 2);
+    return { cv: c, ax: 12, ay: 10 };
+  });
+
+
   P.sand = (sn, v) => memo('s' + sn + v, () => {
     const [c, x] = mk(16, 16), b = sn === 3 ? ['#e4ecef', '#cddae0', '#f6fafb'] : ['#e8d9a2', '#d4c184', '#f4eac0']; rect(x, b[0], 0, 0, 16, 16);
     for (let n = 0; n < 9; n++) dot(x, hash(v, n, 5) > 0.5 ? b[1] : b[2], Math.floor(hash(v, n, 6) * 16), Math.floor(hash(v, n, 7) * 16));

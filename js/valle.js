@@ -14,6 +14,15 @@ window.G = window.G || {};
   G.season = () => (G.mapId === 'valle' ? Math.floor((G.S.day - 1) / 28) % 4 : -1);
   G.dateText = () => { const d = G.S.day - 1; return G.SEASONS[Math.floor(d / 28) % 4] + ' ' + (d % 28 + 1) + (d >= 112 ? ' · año ' + (Math.floor(d / 112) + 1) : ''); };
 
+  /* Clima del día: lluvia en algunos días (nunca en invierno, que nieva) */
+  G.weather = () => {
+    if (G.mapId !== 'valle') return 'clear';
+    const sn = G.season(), r = hash1(G.S.day);
+    return sn === 3 ? 'snow' : r < (sn === 1 ? 0.1 : 0.22) ? 'rain' : 'clear';
+  };
+  function hash1(n) { let x = Math.imul(n | 0, 2654435761) ^ 0x5bd1e995; x = Math.imul(x ^ (x >>> 15), 2246822519); return ((x ^ (x >>> 13)) >>> 0) / 4294967296; }
+  G.weatherName = () => ({ rain: 'Lluvia', snow: 'Nieve', clear: 'Despejado' })[G.weather()];
+
   /* ---------------- Peces de agua dulce ---------------- */
   (function () {
     const OR = ['orilla'];
@@ -47,6 +56,9 @@ window.G = window.G || {};
   const tileAt = (tx, ty) => (inMap(tx, ty) ? tiles[ix(tx, ty)] : T.TREE);
   const hash = (x, y, s) => { let n = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1274126177)) | 0; n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
   const rng = U.rng(20260);
+  const sm = (t) => t * t * (3 - 2 * t);
+  const vnoise = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), fx = sm(x - xi), fy = sm(y - yi); const a = hash(xi, yi, 3), b = hash(xi + 1, yi, 3), c = hash(xi, yi + 1, 3), d = hash(xi + 1, yi + 1, 3); return U.lerp(U.lerp(a, b, fx), U.lerp(c, d, fx), fy); };
+  const grassType = (tx, ty) => { const n = vnoise(tx / 7, ty / 7) * 0.7 + vnoise(tx / 3, ty / 3) * 0.3; return n < 0.36 ? 1 : n > 0.66 ? 2 : 0; };
   const disc = (cx, cy, r, f) => { for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++) for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++) if (inMap(x, y) && Math.hypot(x + .5 - cx, y + .5 - cy) <= r) f(x, y); };
   const buildings = [], lamps = [], npcs = [], treeList = [];
   const BX = { home: 7, bait: 19, rods: 25, lonja: 31, fashion: 37, stall: 43 };   // columna (tile) de cada edificio
@@ -200,8 +212,9 @@ window.G = window.G || {};
   const isW = (tx, ty) => { const t = tileAt(tx, ty); return t === T.WATER || t === T.BRIDGE; };
   const BANK = ['#4f7a2c', '#3f6a24', '#7a5a22', '#9fb4c0'];
   function drawGround(ctx, vis, E) {
-    const sn = G.season(), fr = Math.floor(E.t * 2.5) % 4, win = sn === 3;
+    const sn = G.season(), t = E.t, fr = Math.floor(t * 2.5) % 4, win = sn === 3, rain = G.weather() === 'rain';
     const tx0 = Math.max(0, Math.floor(vis.x0 / TS)), tx1 = Math.min(MW - 1, Math.floor(vis.x1 / TS)), ty0 = Math.max(0, Math.floor(vis.y0 / TS)), ty1 = Math.min(MH - 1, Math.floor(vis.y1 / TS));
+    const reeds = [], tufts = [];
     ctx.imageSmoothingEnabled = false;
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
       const i = ix(tx, ty), tp = tiles[i], x = tx * TS, y = ty * TS, h = hash(tx, ty, 1), v = Math.floor(h * 4);
@@ -210,29 +223,61 @@ window.G = window.G || {};
         const d = dist[i];
         spr = PX.water(fr, d < 12 ? 0 : d < 28 ? 1 : 2, wk[i], win);
         ctx.drawImage(spr, x, y, TS, TS);
-        // espuma en la orilla
-        ctx.fillStyle = 'rgba(255,255,255,.55)';
-        if (!isW(tx, ty - 1)) ctx.fillRect(x, y, TS, 2);
-        if (!isW(tx, ty + 1)) ctx.fillRect(x, y + TS - 2, TS, 2);
-        if (!isW(tx - 1, ty)) ctx.fillRect(x, y, 2, TS);
-        if (!isW(tx + 1, ty)) ctx.fillRect(x + TS - 2, y, 2, TS);
+        // olas de espuma que van y vienen en la orilla
+        const wv = Math.round(Math.sin(t * 1.8 + tx * 0.7 + ty * 0.5) * 1.5 + 1.5);
+        ctx.fillStyle = 'rgba(255,255,255,.6)';
+        if (!isW(tx, ty - 1)) { ctx.fillRect(x, y, TS, 2); ctx.fillRect(x + ((tx * 7) % 3) * 8, y + 2, 12, wv > 1 ? 2 : 0); }
+        if (!isW(tx, ty + 1)) { ctx.fillRect(x, y + TS - 2, TS, 2); ctx.fillRect(x + 4 + ((tx * 5) % 3) * 8, y + TS - 4, 12, wv > 1 ? 2 : 0); }
+        if (!isW(tx - 1, ty)) { ctx.fillRect(x, y, 2, TS); ctx.fillRect(x + 2, y + 4 + ((ty * 5) % 3) * 8, wv > 1 ? 2 : 0, 12); }
+        if (!isW(tx + 1, ty)) { ctx.fillRect(x + TS - 2, y, 2, TS); ctx.fillRect(x + TS - 4, y + 6 + ((ty * 3) % 3) * 8, wv > 1 ? 2 : 0, 12); }
+        // nenúfares en el lago y el estanque
+        if (wk[i] === 2 && !win && d > 5 && d < 40 && hash(tx, ty, 41) < 0.12) { const lb = Math.round(Math.sin(t * 1.3 + tx)); PX.drawAt(ctx, PX.lily(Math.floor(hash(tx, ty, 42) * 6), Math.floor(t * 0.7 + tx) % 2), x + 10 + hash(tx, ty, 43) * 12, y + 14 + lb + hash(tx, ty, 44) * 8); }
+        // piedras que asoman en el río
+        if (wk[i] === 1 && d > 8 && hash(tx, ty, 45) < 0.05) PX.drawAt(ctx, PX.rock(sn, 1), x + 16, y + 26);
+        // gotas de lluvia en el agua
+        if (rain && hash(tx, ty, Math.floor(t * 3)) < 0.1) { const r = Math.round(((t * 3) % 1) * 6) + 1; ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(x + 8 + hash(tx, ty, 9) * 12 - r, y + 14, r * 2, 2); }
         continue;
       }
       if (tp === T.BRIDGE) { ctx.drawImage(PX.water(fr, 1, 1, win), x, y, TS, TS); ctx.drawImage(PX.bridge(v), x, y, TS, TS); continue; }
-      if (tp === T.PATH) spr = PX.path(sn, v); else if (tp === T.PLAZA) spr = PX.plaza(sn, v); else if (tp === T.SAND) spr = PX.sand(sn, v); else spr = PX.grass(sn, v);
+      if (tp === T.PATH) spr = PX.path(sn, v); else if (tp === T.PLAZA) spr = PX.plaza(sn, v); else if (tp === T.SAND) spr = PX.sand(sn, v); else spr = PX.grass(sn, grassType(tx, ty) * 4 + v);
       ctx.drawImage(spr, x, y, TS, TS);
-      // bordes: orilla (hierba junto al agua) y caminos junto a la hierba
-      const nb = [[0, -1], [0, 1], [-1, 0], [1, 0]];
-      for (const [dx, dy] of nb) {
-        const t2 = tileAt(tx + dx, ty + dy), eq = (t2 === T.WATER);
-        if (eq) { ctx.fillStyle = BANK[sn === 3 ? 3 : tp === T.SAND ? 2 : 1]; if (dy < 0) ctx.fillRect(x, y, TS, 4); else if (dy > 0) ctx.fillRect(x, y + TS - 4, TS, 4); else if (dx < 0) ctx.fillRect(x, y, 4, TS); else ctx.fillRect(x + TS - 4, y, 4, TS); }
-        else if ((tp === T.PATH || tp === T.PLAZA) && (t2 === T.GRASS || t2 === T.FLOWER || t2 === T.TREE || t2 === T.ROCK)) { ctx.fillStyle = tp === T.PLAZA ? '#6e675c' : '#a2804e'; if (dy < 0) ctx.fillRect(x, y, TS, 2); else if (dy > 0) ctx.fillRect(x, y + TS - 2, TS, 2); else if (dx < 0) ctx.fillRect(x, y, 2, TS); else ctx.fillRect(x + TS - 2, y, 2, TS); }
+      if (rain && (tp === T.PATH || tp === T.PLAZA)) { ctx.fillStyle = 'rgba(30,24,16,.16)'; ctx.fillRect(x, y, TS, TS); if (h > 0.72) { ctx.fillStyle = 'rgba(90,150,200,.55)'; ctx.fillRect(x + 6, y + 14, 18, 6); ctx.fillRect(x + 10, y + 12, 10, 2); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(x + 10, y + 15, 4, 2); } }
+      // bordes: orilla (hierba junto al agua) y caminos junto a la hierba (con matas)
+      for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+        const t2 = tileAt(tx + dx, ty + dy);
+        if (t2 === T.WATER) { ctx.fillStyle = BANK[sn === 3 ? 3 : tp === T.SAND ? 2 : 1]; if (dy < 0) ctx.fillRect(x, y, TS, 4); else if (dy > 0) ctx.fillRect(x, y + TS - 4, TS, 4); else if (dx < 0) ctx.fillRect(x, y, 4, TS); else ctx.fillRect(x + TS - 4, y, 4, TS); }
+        else if ((tp === T.PATH || tp === T.PLAZA) && (t2 === T.GRASS || t2 === T.FLOWER || t2 === T.TREE || t2 === T.ROCK)) {
+          ctx.fillStyle = tp === T.PLAZA ? '#6e675c' : '#a2804e'; if (dy < 0) ctx.fillRect(x, y, TS, 2); else if (dy > 0) ctx.fillRect(x, y + TS - 2, TS, 2); else if (dx < 0) ctx.fillRect(x, y, 2, TS); else ctx.fillRect(x + TS - 2, y, 2, TS);
+          if (tp === T.PATH) { ctx.fillStyle = sn === 3 ? '#e8f0f4' : sn === 2 ? '#b09a3c' : '#5fae3f'; for (let k = 0; k < 3; k++) { const o = 2 + Math.floor(hash(tx, ty, 50 + k) * 24) ; if (hash(tx, ty, 55 + k) < 0.55) { if (dy < 0) ctx.fillRect(x + o, y + 2, 2, 4); else if (dy > 0) ctx.fillRect(x + o, y + TS - 6, 2, 4); else if (dx < 0) ctx.fillRect(x + 2, y + o, 4, 2); else ctx.fillRect(x + TS - 6, y + o, 4, 2); } } }
+        }
+      }
+      if (tp === T.GRASS || tp === T.FLOWER) {
+        const gt = grassType(tx, ty), h2 = hash(tx, ty, 31);
+        if (h2 < (gt === 1 ? 0.55 : gt === 2 ? 0.12 : 0.3)) tufts.push([x + 6 + hash(tx, ty, 32) * 18, y + 14 + hash(tx, ty, 33) * 14, Math.floor(h * 4), tx, ty]);
+        if (h2 > 0.3 && h2 < 0.3 + (gt === 1 ? 0.14 : 0.07) && sn < 3 && tp === T.GRASS) tufts.push([x + 10 + hash(tx, ty, 34) * 12, y + 20 + hash(tx, ty, 35) * 8, Math.floor(h * 4) + 4, tx, ty]);
+        if (tp === T.GRASS && sn === 0 && h2 > 0.88) { const pc = ['#ffffff', '#ffe052', '#ff9fc2'][Math.floor(h * 7) % 3]; ctx.fillStyle = pc; const fx = x + 6 + hash(tx, ty, 36) * 18, fy = y + 6 + hash(tx, ty, 37) * 18; ctx.fillRect(Math.round(fx), Math.round(fy), 2, 2); ctx.fillRect(Math.round(fx) + 4, Math.round(fy) + 6, 2, 2); }
+        if (tp === T.GRASS && sn === 2) { if (h2 > 0.9) { ctx.fillStyle = ['#e0742a', '#c9501f', '#f0b43a'][Math.floor(h * 9) % 3]; ctx.fillRect(x + 4 + Math.floor(h * 20), y + 8 + Math.floor(h2 * 14), 4, 2); ctx.fillRect(x + 20, y + 22, 2, 2); } else if (h2 < 0.04 && gt === 1) PX.drawAt(ctx, PX.mushroom(Math.floor(h * 9)), x + 16, y + 26); }
+        if (tp === T.GRASS && sn === 3 && h2 > 0.82) { const tw = Math.floor(t * 1.5 + h * 9) % 3; if (tw === 0) { ctx.fillStyle = '#ffffff'; const fx = x + 6 + hash(tx, ty, 38) * 18, fy = y + 6 + hash(tx, ty, 39) * 18; ctx.fillRect(Math.round(fx), Math.round(fy), 2, 2); ctx.fillRect(Math.round(fx) - 2, Math.round(fy), 6, 0); } }
+        if (tp === T.GRASS && h2 > 0.985) PX.drawAt(ctx, PX.log(), x + 16, y + 28);
       }
       if (tp === T.FLOWER && sn !== 3) {
-        if (h > 0.72) { PX.drawAt(ctx, PX.bush(sn, v), x + 16, y + 28); }
-        else { const sw = Math.round(Math.sin(E.t * 1.6 + h * 20)); ctx.drawImage(PX.flower(sn, Math.floor(h * 17)), x + 4 + sw, y + 6, 18, 18); }
+        if (h > 0.72) PX.drawAt(ctx, PX.bush(sn, v), x + 16, y + 28);
+        else { const sw = Math.round(Math.sin(t * 1.6 + h * 20)); ctx.drawImage(PX.flower(sn, Math.floor(h * 17)), x + 4 + sw, y + 6, 18, 18); }
       }
       if (tp === T.ROCK) PX.drawAt(ctx, PX.rock(sn, v % 2), x + 16, y + 28);
+      // juncos junto al agua
+      if ((tp === T.SAND || tp === T.GRASS) && sn < 3 && hash(tx, ty, 46) < 0.4) { const dxy = [[0, -1, 0], [0, 1, 30], [-1, 0, 4], [1, 0, 28]]; for (const [dx, dy, off] of dxy) if (tileAt(tx + dx, ty + dy) === T.WATER && wk[ix(tx + dx, ty + dy)] !== 0) { reeds.push([x + (dy ? 6 + hash(tx, ty, 47) * 18 : off), y + (dy < 0 ? 8 : dy > 0 ? 30 : 12 + hash(tx, ty, 48) * 14), tx, ty]); break; } }
+    }
+    // mechas de hierba y juncos (se mecen con el viento)
+    const wind = (tx, ty) => (Math.sin(tx * 0.55 + ty * 0.3 - t * 2.2) > 0.25 ? 1 : 0);
+    for (const [x, y, v2, tx, ty] of tufts) PX.drawAt(ctx, PX.tuft(sn, v2, wind(tx, ty)), x, y);
+    for (const [x, y, tx, ty] of reeds) PX.drawAt(ctx, PX.reed(wind(tx, ty)), x, y);
+    // sombras de peces bajo el agua (pistas de dónde pescar)
+    if (!win) for (const f of shadows) {
+      if (f.x < vis.x0 - 60 || f.x > vis.x1 + 60 || f.y < vis.y0 - 60 || f.y > vis.y1 + 60) continue;
+      const x = f.x + Math.cos(t * f.sp + f.ph) * 36, y = f.y + Math.sin(t * f.sp * 0.8 + f.ph) * 14;
+      if (!isWater(x, y)) continue;
+      ctx.globalAlpha = 0.5; PX.drawAt(ctx, PX.shadowFish(-Math.sin(t * f.sp + f.ph) >= 0 ? 1 : -1), x, y); if (f.big) PX.drawAt(ctx, PX.shadowFish(-Math.sin(t * f.sp + f.ph) >= 0 ? 1 : -1), x + 14, y + 4); ctx.globalAlpha = 1;
     }
   }
 
@@ -287,6 +332,7 @@ window.G = window.G || {};
 
   /* patos, mariposas, luciérnagas, peces saltando, sombras de nubes */
   const ducks = (function () { const out = [], r = U.rng(77); let n = 0, tries = 0; while (n < 16 && tries++ < 4000) { const tx = Math.floor(r() * MW), ty = Math.floor(r() * MH); if (tiles[ix(tx, ty)] === T.WATER && dist[ix(tx, ty)] >= 8) { out.push({ x: tx * TS + 16, y: ty * TS + 16, ph: r() * 6.3, sp: 0.25 + r() * 0.25 }); n++; } } return out; })();
+  const shadows = (function () { const out = [], r = U.rng(99); let n = 0, tries = 0; while (n < 44 && tries++ < 6000) { const tx = Math.floor(r() * MW), ty = Math.floor(r() * MH); if (tiles[ix(tx, ty)] === T.WATER && dist[ix(tx, ty)] >= 10) { out.push({ x: tx * TS + 16, y: ty * TS + 16, ph: r() * 6.3, sp: 0.12 + r() * 0.16, big: r() < 0.2 }); n++; } } return out; })();
   const BFC = ['#ffd23a', '#ff8ab4', '#ffffff', '#8ac8ff', '#ffa040'];
   function ambient(ctx, vis, E) {
     const t = E.t, sn = G.season(), day = 1 - E.night;
@@ -308,8 +354,14 @@ window.G = window.G || {};
       ctx.fillStyle = 'rgba(255,255,255,.7)'; const rr = Math.round(4 + a * 12); ctx.fillRect(Math.round(x) - rr, Math.round(y), rr * 2, 2);
       PX.drawAt(ctx, PX.fishJump(), x, y - hh);
     }
-    // mariposas (de día, primavera y verano)
-    if (sn < 2 && day > 0.5) for (let i = 0; i < 70; i++) {
+    // lluvia
+    if (G.weather() === 'rain') {
+      ctx.fillStyle = 'rgba(20,40,80,.16)'; ctx.fillRect(vis.x0, vis.y0, vis.x1 - vis.x0, vis.y1 - vis.y0);
+      ctx.fillStyle = 'rgba(190,220,255,.75)';
+      for (let k = 0; k < 110; k++) { const fx = vis.x0 + (hash(k, 1, 120) * (vis.x1 - vis.x0) + t * 60) % (vis.x1 - vis.x0), fy = vis.y0 + (hash(k, 2, 121) * (vis.y1 - vis.y0) + t * 420) % (vis.y1 - vis.y0); ctx.fillRect(Math.round(fx), Math.round(fy), 2, 8); ctx.fillRect(Math.round(fx) - 2, Math.round(fy) + 8, 2, 2); }
+    }
+    // mariposas (de día, primavera y verano, sin lluvia)
+    if (sn < 2 && day > 0.5 && G.weather() !== 'rain') for (let i = 0; i < 70; i++) {
       const bx = hash(i, 1, 90) * MW * TS, by = hash(i, 2, 91) * MH * TS;
       if (bx < vis.x0 - 40 || bx > vis.x1 + 40 || by < vis.y0 - 40 || by > vis.y1 + 40) continue;
       const x = bx + Math.sin(t * 1.1 + i) * 22, y = by + Math.cos(t * 1.5 + i * 1.7) * 14;

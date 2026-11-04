@@ -41,7 +41,7 @@ G.UI = (function () {
     chip('hBait', BAIT_IC[b.id] || 'worm', String(S.baits[b.id] || 0));
     chip('hCool', 'cooler', S.bag.length + '/' + G.coolerCap());
     chip('hGems', 'gem', String(S.gems || 0));
-    if (valle) chip('hSwell', ['flower', 'sun', 'leaf', 'snow'][G.season()], ['Fresco', 'Cálido', 'Ventoso', 'Helado'][G.season()]);
+    if (valle) { const rn = G.weather() === 'rain'; chip('hSwell', rn ? 'wave' : ['flower', 'sun', 'leaf', 'snow'][G.season()], rn ? 'Lluvia' : ['Fresco', 'Cálido', 'Ventoso', 'Helado'][G.season()]); }
     else chip('hSwell', 'wave', G.SWELL_NAMES[S.swell]);
     if (G.Quests) {
       const q = G.Quests.active()[0], nr = G.Quests.readyCount(), hq = $('hQuest');

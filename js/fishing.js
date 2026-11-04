@@ -211,6 +211,7 @@ G.Fish = (function () {
         F.waitT = U.rand(4, 8.5) * (1.05 - G.env.swell * 0.05) * bt.wait;
         if (isNight() && G.S.owned.extras.includes('lampara')) F.waitT *= 0.8;
         if (F.school) F.waitT *= 0.55;
+        if (G.weather && G.weather() === 'rain') F.waitT *= 0.75;   // con lluvia pican antes
         if (F.barren) F.waitT = U.rand(6, 9);
         G.UI.fishHud({ phase: 'wait' });
       }
