@@ -5,7 +5,7 @@ window.G = window.G || {};
 (function () {
   const U = G.U;
   const TS = 32, MW = 100, MH = 76;                       // tamaño de tile y del mapa (en tiles)
-  const T = { GRASS: 0, WATER: 1, PATH: 3, TREE: 4, BRIDGE: 5, SAND: 6, BLDG: 7, ROCK: 8, FLOWER: 9 };
+  const T = { GRASS: 0, WATER: 1, PATH: 3, TREE: 4, BRIDGE: 5, SAND: 6, BLDG: 7, ROCK: 8, FLOWER: 9, PLAZA: 10 };
   const MPT = TS / G.PXM;                                  // metros por tile
 
   /* ---------------- Estaciones ---------------- */
@@ -86,9 +86,9 @@ window.G = window.G || {};
     // arena en las orillas
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (tiles[ix(x, y)] === T.GRASS) { let w = false; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (tileAt(x + dx, y + dy) === T.WATER) w = true; if (w && hash(x, y, 5) < 0.85) tiles[ix(x, y)] = T.SAND; }
     // camino principal (y 36-37) con puente sobre el río, y caminos secundarios
-    const path = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { if (!inMap(x, y)) continue; const i = ix(x, y); tiles[i] = tiles[i] === T.WATER ? T.BRIDGE : T.PATH; } };
+    const path = (x0, y0, x1, y1, tp) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { if (!inMap(x, y)) continue; const i = ix(x, y); tiles[i] = tiles[i] === T.WATER ? T.BRIDGE : (tp || T.PATH); } };
     path(6, 36, 86, 37);
-    path(6, 34, 50, 35);                       // explanada frente a las tiendas
+    path(6, 34, 50, 35, T.PLAZA);              // plaza frente a las tiendas
     path(9, 34, 10, 36);
     path(29, 38, 30, 52);                      // bajada al estanque y al sur
     path(10, 47, 30, 47);
@@ -143,7 +143,7 @@ window.G = window.G || {};
   })();
 
   /* ---------------- Consultas ---------------- */
-  const walkTile = (t) => t === T.GRASS || t === T.PATH || t === T.BRIDGE || t === T.SAND || t === T.FLOWER;
+  const walkTile = (t) => t === T.GRASS || t === T.PATH || t === T.PLAZA || t === T.BRIDGE || t === T.SAND || t === T.FLOWER;
   const walkAt = (x, y) => walkTile(tileAt(Math.floor(x / TS), Math.floor(y / TS)));
   function canWalk(x, y) { return walkAt(x, y) && walkAt(x - 7, y + 5) && walkAt(x + 7, y + 5); }
   function freeSpot(x, y) {
@@ -195,121 +195,166 @@ window.G = window.G || {};
   const HOME_DOOR = { x: (BX.home + 3.5) * TS, y: (BROW + BH) * TS + 20 };
   const CHEST = { x: 80.5 * TS, y: 13 * TS };
 
-  /* ---------------- Dibujo ---------------- */
-  const GRASS = [['#8dc65a', '#86be54', '#93ca60'], ['#6fb54a', '#68ac45', '#76bb50'], ['#b8a24a', '#b09a44', '#c1ab52'], ['#e4edf2', '#dbe6ec', '#eef4f7']];
-  const CANOPY = [['#6fbf4a', '#f0a8c8', '#5aaa40'], ['#3f9a3a', '#4aa840', '#36883a'], ['#d9822b', '#c4562a', '#e0a93a'], ['#eef4f7', '#dbe6ec', '#cfdde6']];
-  const SANDC = ['#e8d9a2', '#e6d29a', '#e0d09a', '#e8eef0'];
+  /* ---------------- Dibujo (arte pixel de G.Pix) ---------------- */
+  const PX = G.Pix, K = PX.K;
+  const isW = (tx, ty) => { const t = tileAt(tx, ty); return t === T.WATER || t === T.BRIDGE; };
+  const BANK = ['#4f7a2c', '#3f6a24', '#7a5a22', '#9fb4c0'];
   function drawGround(ctx, vis, E) {
-    const sn = G.season(), t = E.t;
+    const sn = G.season(), fr = Math.floor(E.t * 2.5) % 4, win = sn === 3;
     const tx0 = Math.max(0, Math.floor(vis.x0 / TS)), tx1 = Math.min(MW - 1, Math.floor(vis.x1 / TS)), ty0 = Math.max(0, Math.floor(vis.y0 / TS)), ty1 = Math.min(MH - 1, Math.floor(vis.y1 / TS));
+    ctx.imageSmoothingEnabled = false;
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
-      const i = ix(tx, ty), tp = tiles[i], x = tx * TS, y = ty * TS, h = hash(tx, ty, 1);
+      const i = ix(tx, ty), tp = tiles[i], x = tx * TS, y = ty * TS, h = hash(tx, ty, 1), v = Math.floor(h * 4);
+      let spr;
       if (tp === T.WATER) {
-        const d = dist[i], r = wk[i] === 1;
-        const base = sn === 3 ? [138, 190, 220] : r ? [66, 150, 200] : [46, 128, 178], k = Math.min(1, d / 60);
-        ctx.fillStyle = `rgb(${base[0] - k * 18 | 0},${base[1] - k * 26 | 0},${base[2] - k * 26 | 0})`; ctx.fillRect(x, y, TS + 1, TS + 1);
-        ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1.4; ctx.beginPath();
-        const ox = Math.sin(t * (r ? 1.2 : 0.6) + h * 9) * 5; ctx.moveTo(x + 5 + ox, y + 9 + h * 8); ctx.quadraticCurveTo(x + 14 + ox, y + 5 + h * 8, x + 23 + ox, y + 9 + h * 8);
-        if (h > 0.5) { ctx.moveTo(x + 8 - ox, y + 22); ctx.quadraticCurveTo(x + 16 - ox, y + 18, x + 26 - ox, y + 22); } ctx.stroke();
-        if (r) { ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); const fl = (t * 30 + h * 40) % 40; ctx.moveTo(x + 4, y + fl - 6); ctx.lineTo(x + 28, y + fl); ctx.stroke(); }
+        const d = dist[i];
+        spr = PX.water(fr, d < 12 ? 0 : d < 28 ? 1 : 2, wk[i], win);
+        ctx.drawImage(spr, x, y, TS, TS);
         // espuma en la orilla
-        ctx.fillStyle = 'rgba(255,255,255,.35)';
-        if (tileAt(tx, ty - 1) !== T.WATER && tileAt(tx, ty - 1) !== T.BRIDGE) ctx.fillRect(x, y, TS, 3);
-        if (tileAt(tx, ty + 1) !== T.WATER && tileAt(tx, ty + 1) !== T.BRIDGE) ctx.fillRect(x, y + TS - 3, TS, 3);
-        if (tileAt(tx - 1, ty) !== T.WATER && tileAt(tx - 1, ty) !== T.BRIDGE) ctx.fillRect(x, y, 3, TS);
-        if (tileAt(tx + 1, ty) !== T.WATER && tileAt(tx + 1, ty) !== T.BRIDGE) ctx.fillRect(x + TS - 3, y, 3, TS);
+        ctx.fillStyle = 'rgba(255,255,255,.55)';
+        if (!isW(tx, ty - 1)) ctx.fillRect(x, y, TS, 2);
+        if (!isW(tx, ty + 1)) ctx.fillRect(x, y + TS - 2, TS, 2);
+        if (!isW(tx - 1, ty)) ctx.fillRect(x, y, 2, TS);
+        if (!isW(tx + 1, ty)) ctx.fillRect(x + TS - 2, y, 2, TS);
         continue;
       }
-      if (tp === T.BRIDGE) {
-        const wi = wk[i] || 1; ctx.fillStyle = sn === 3 ? '#9ec6dd' : '#3d8fc4'; ctx.fillRect(x, y, TS + 1, TS + 1);
-        ctx.fillStyle = '#9b7348'; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = '#b08455'; for (let k = 0; k < 4; k++) ctx.fillRect(x + 1, y + k * 8 + 1, TS - 2, 6);
-        ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(x, y, 3, TS); ctx.fillRect(x + TS - 3, y, 3, TS); void wi;
-        continue;
+      if (tp === T.BRIDGE) { ctx.drawImage(PX.water(fr, 1, 1, win), x, y, TS, TS); ctx.drawImage(PX.bridge(v), x, y, TS, TS); continue; }
+      if (tp === T.PATH) spr = PX.path(sn, v); else if (tp === T.PLAZA) spr = PX.plaza(sn, v); else if (tp === T.SAND) spr = PX.sand(sn, v); else spr = PX.grass(sn, v);
+      ctx.drawImage(spr, x, y, TS, TS);
+      // bordes: orilla (hierba junto al agua) y caminos junto a la hierba
+      const nb = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+      for (const [dx, dy] of nb) {
+        const t2 = tileAt(tx + dx, ty + dy), eq = (t2 === T.WATER);
+        if (eq) { ctx.fillStyle = BANK[sn === 3 ? 3 : tp === T.SAND ? 2 : 1]; if (dy < 0) ctx.fillRect(x, y, TS, 4); else if (dy > 0) ctx.fillRect(x, y + TS - 4, TS, 4); else if (dx < 0) ctx.fillRect(x, y, 4, TS); else ctx.fillRect(x + TS - 4, y, 4, TS); }
+        else if ((tp === T.PATH || tp === T.PLAZA) && (t2 === T.GRASS || t2 === T.FLOWER || t2 === T.TREE || t2 === T.ROCK)) { ctx.fillStyle = tp === T.PLAZA ? '#6e675c' : '#a2804e'; if (dy < 0) ctx.fillRect(x, y, TS, 2); else if (dy > 0) ctx.fillRect(x, y + TS - 2, TS, 2); else if (dx < 0) ctx.fillRect(x, y, 2, TS); else ctx.fillRect(x + TS - 2, y, 2, TS); }
       }
-      let col;
-      if (tp === T.PATH) col = sn === 3 ? '#d8d2c4' : '#d6bd8a'; else if (tp === T.SAND) col = SANDC[sn]; else col = GRASS[sn][Math.floor(h * 3)];
-      ctx.fillStyle = col; ctx.fillRect(x, y, TS + 1, TS + 1);
-      if (tp === T.PATH) { ctx.fillStyle = 'rgba(120,90,50,.18)'; ctx.fillRect(x + h * 20, y + 8 + h * 14, 4, 3); ctx.fillRect(x + 6 + h * 12, y + 22, 3, 3); }
-      else if (tp === T.GRASS || tp === T.FLOWER || tp === T.TREE || tp === T.ROCK) {
-        if (h > 0.7) { ctx.fillStyle = 'rgba(0,0,0,.06)'; ctx.fillRect(x + h * 22, y + 6 + h * 10, 5, 2); }
-        if (tp === T.FLOWER && sn !== 3) { const cols = sn === 2 ? ['#e0742a', '#d9a03a'] : ['#f2e052', '#ff7aa8', '#ffffff', '#8aa8ff']; ctx.fillStyle = cols[Math.floor(h * 97) % cols.length]; ctx.fillRect(x + 8, y + 10, 4, 4); ctx.fillRect(x + 20, y + 20, 4, 4); }
-        if (tp === T.ROCK) { ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x + 17, y + 25, 12, 5, 0, 0, 6.3); ctx.fill(); ctx.fillStyle = '#8d9096'; ctx.beginPath(); ctx.ellipse(x + 16, y + 19, 12, 9, 0, 0, 6.3); ctx.fill(); ctx.fillStyle = '#a9adb3'; ctx.beginPath(); ctx.ellipse(x + 13, y + 16, 6, 4, 0, 0, 6.3); ctx.fill(); if (sn === 3) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(x + 16, y + 13, 9, 4, 0, 0, 6.3); ctx.fill(); } }
+      if (tp === T.FLOWER && sn !== 3) {
+        if (h > 0.72) { PX.drawAt(ctx, PX.bush(sn, v), x + 16, y + 28); }
+        else { const sw = Math.round(Math.sin(E.t * 1.6 + h * 20)); ctx.drawImage(PX.flower(sn, Math.floor(h * 17)), x + 4 + sw, y + 6, 18, 18); }
       }
+      if (tp === T.ROCK) PX.drawAt(ctx, PX.rock(sn, v % 2), x + 16, y + 28);
     }
   }
 
-  function drawTree(ctx, tx, ty, sn) {
-    const i = ix(tx, ty), v = tv[i], h = hash(tx, ty, 7), x = tx * TS + TS / 2 + (h - 0.5) * 6, y = (ty + 1) * TS - 2, s = 0.9 + h * 0.4;
-    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x + 3, y, 18 * s, 6 * s, 0, 0, 6.3); ctx.fill();
-    ctx.fillStyle = '#6b4a2b'; ctx.fillRect(x - 4 * s, y - 20 * s, 8 * s, 20 * s);
-    const c = CANOPY[sn];
-    if (v === 1) { // pino
-      const g = sn === 3 ? ['#f2f6f8', '#dde8ee', '#c9d8e0'] : ['#2f7d46', '#38904f', '#42a15a'];
-      for (let k = 0; k < 3; k++) { ctx.fillStyle = g[k]; ctx.beginPath(); ctx.moveTo(x, y - 62 * s + k * 14 * s); ctx.lineTo(x + (16 + k * 5) * s, y - 20 * s + k * 4 * s - (2 - k) * 2); ctx.lineTo(x - (16 + k * 5) * s, y - 20 * s + k * 4 * s - (2 - k) * 2); ctx.closePath(); ctx.fill(); }
-    } else {
-      const cols = sn === 3 ? c : v === 2 && sn === 0 ? [c[1], c[0], c[1]] : sn === 2 ? c : [c[0], c[2], c[0]];
-      ctx.fillStyle = cols[0]; ctx.beginPath(); ctx.arc(x, y - 36 * s, 21 * s, 0, 6.3); ctx.fill();
-      ctx.fillStyle = cols[1]; ctx.beginPath(); ctx.arc(x - 9 * s, y - 28 * s, 13 * s, 0, 6.3); ctx.arc(x + 10 * s, y - 42 * s, 12 * s, 0, 6.3); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(x - 7 * s, y - 46 * s, 9 * s, 0, 6.3); ctx.fill();
-    }
+  function treeSprite(tx, ty, sn) {
+    const i = ix(tx, ty), v = tv[i], h = hash(tx, ty, 7);
+    return v === 1 ? PX.tree(1, sn, Math.floor(h * 3)) : PX.tree(0, sn, v === 2 ? 2 : (h > 0.5 ? 1 : 0));
   }
   const treeLayer = (ctx, vis, sn, front) => {
     const tx0 = Math.max(0, Math.floor(vis.x0 / TS) - 1), tx1 = Math.min(MW - 1, Math.floor(vis.x1 / TS) + 1), ty0 = Math.max(0, Math.floor(vis.y0 / TS)), ty1 = Math.min(MH - 1, Math.floor(vis.y1 / TS) + 3), py = G.P.y;
-    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) if (tiles[ix(tx, ty)] === T.TREE) { const base = (ty + 1) * TS - 2; if ((base > py) === front) drawTree(ctx, tx, ty, sn); }
+    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) if (tiles[ix(tx, ty)] === T.TREE) {
+      const base = (ty + 1) * TS - 2;
+      if ((base > py) === front) { const h = hash(tx, ty, 8); PX.drawAt(ctx, treeSprite(tx, ty, sn), tx * TS + 16 + (h - 0.5) * 6, base); }
+    }
   };
 
-  const ICON_OF = { bait: 'worm', rods: 'rod', fashion: 'shirt', lonja: 'anchor', stall: 'fish', home: 'house' };
-  function drawBuilding(ctx, b, E) {
-    const x = b.x, y = b.y, w = b.w, h = b.h;
-    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(x + 6, y + h - 4, w, 12);
-    ctx.fillStyle = b.wall; ctx.fillRect(x, y + 34, w, h - 34);
-    ctx.fillStyle = 'rgba(0,0,0,.08)'; for (let k = 0; k < h - 34; k += 12) ctx.fillRect(x, y + 34 + k, w, 1);
-    // tejado
-    ctx.fillStyle = b.roof; ctx.beginPath(); ctx.moveTo(x - 8, y + 40); ctx.lineTo(x + 10, y); ctx.lineTo(x + w - 10, y); ctx.lineTo(x + w + 8, y + 40); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = 'rgba(0,0,0,.18)'; for (let k = 0; k < w; k += 16) ctx.fillRect(x + k, y + 6, 2, 30);
-    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(x + 10, y, w - 20, 5);
-    // toldo
-    ctx.fillStyle = b.awn; ctx.fillRect(x, y + 40, w, 12); for (let k = 0; k < w; k += 20) { ctx.fillStyle = (k / 20) % 2 ? '#fff' : b.awn; ctx.fillRect(x + k, y + 40, 20, 12); }
-    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(x, y + 52, w, 4);
-    // cartel y ventanas
-    ctx.fillStyle = '#16384f'; ctx.fillRect(x + 8, y + 62, w - 16, 20); ctx.fillStyle = '#fff'; ctx.font = '700 11px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.label, x + w / 2, y + 72.5);
-    const night = G.env.night > 0.4;
-    for (const wx of [x + 14, x + w - 38]) { ctx.fillStyle = night ? '#ffd877' : '#9fd6ea'; ctx.fillRect(wx, y + 92, 24, 26); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(wx + 11, y + 92, 2, 26); ctx.fillRect(wx, y + 104, 24, 2); }
-    // puerta
-    const dx = x + w / 2 - 14; ctx.fillStyle = '#6b4a2b'; ctx.fillRect(dx, y + h - 46, 28, 46); ctx.fillStyle = '#8a5e36'; ctx.fillRect(dx + 3, y + h - 43, 22, 40); ctx.fillStyle = '#ffd36a'; ctx.fillRect(dx + 20, y + h - 24, 3, 4);
-    G.Icons.draw(ctx, ICON_OF[b.kind] || 'anchor', x + w / 2, y + 114, 24);
-    if (b.kind === 'stall') { ctx.fillStyle = '#16384f'; ctx.font = '700 9px system-ui'; }
-    const bob = Math.sin(E.t * 4) * 3; ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(x + w / 2 - 9, y - 22 + bob); ctx.lineTo(x + w / 2 + 9, y - 22 + bob); ctx.lineTo(x + w / 2, y - 8 + bob); ctx.closePath(); ctx.fill();
+  /* Objetos sueltos (barriles, farolas, bancos...) con su posición base */
+  const decor = [];
+  for (const b of buildings) {
+    decor.push({ s: PX.barrel, x: b.x + 14, y: b.y + b.h + 18 }, { s: PX.crate, x: b.x + b.w - 16, y: b.y + b.h + 16 });
   }
+  for (const l of lamps) decor.push({ s: PX.lamp, x: l.x, y: l.y + 6 });
+  decor.push({ s: PX.bench, x: 25 * TS, y: 36 * TS - 4 }, { s: PX.bench, x: 41 * TS, y: 36 * TS - 4 }, { s: PX.well, x: 36 * TS, y: 36 * TS - 6 });
+  const drawDecor = (ctx, vis, front) => { const py = G.P.y; for (const d of decor) { if (d.x < vis.x0 - 60 || d.x > vis.x1 + 60 || d.y < vis.y0 - 20 || d.y > vis.y1 + 80) continue; if ((d.y > py) === front) PX.drawAt(ctx, d.s(), d.x, d.y); } };
+
+  function drawBuilding(ctx, b, E) {
+    const spr = PX.building(b, G.env.night > 0.4, G.season() === 3);
+    ctx.drawImage(spr.cv, b.x, b.y, spr.cv.width * K, spr.cv.height * K);
+    // humo de la chimenea
+    const W2 = Math.round(b.w / K);
+    for (let k = 0; k < 4; k++) { const u = (E.t * 0.22 + k / 4 + b.x * 0.01) % 1; ctx.fillStyle = `rgba(235,235,240,${(1 - u) * 0.7})`; const s = 4 + u * 6; ctx.fillRect(Math.round(b.x + (W2 - 13) * K + Math.sin(u * 6 + k) * 5), Math.round(b.y - u * 44), s, s); }
+    const bob = Math.round(Math.sin(E.t * 4) * 3); ctx.fillStyle = '#2b1a0c'; ctx.fillRect(b.x + b.w / 2 - 10, b.y - 24 + bob, 20, 4); ctx.fillStyle = '#ffd23a'; ctx.fillRect(b.x + b.w / 2 - 8, b.y - 22 + bob, 16, 2);
+    ctx.fillStyle = '#2b1a0c'; ctx.fillRect(b.x + b.w / 2 - 6, b.y - 20 + bob, 12, 4); ctx.fillStyle = '#ffd23a'; ctx.fillRect(b.x + b.w / 2 - 4, b.y - 20 + bob, 8, 2); ctx.fillStyle = '#2b1a0c'; ctx.fillRect(b.x + b.w / 2 - 2, b.y - 16 + bob, 4, 4);
+  }
+  const NLOOK = {
+    marino: { skin: '#d9a074', hair: '#cfcfcf', shirt: { id: 'n1', color: '#f2f2f2', color2: '#27508f', style: 'stripes' }, pants: { id: 'n1', color: '#1c2b4a' }, shoes: { id: 'n1', color: '#2f6b3b', type: 'boot' }, hat: { id: 'n1', type: 'captain', color: '#f4f4f4' } },
+    lucia: { skin: '#f2c9a0', hair: '#5a3b22', shirt: { id: 'n2', color: '#c2477e', style: 'plain' }, pants: { id: 'n2', color: '#3a62a0' }, shoes: { id: 'n2', color: '#f4f4f4', type: 'shoe' }, hat: { id: 'n2', type: 'bandana', color: '#e0463a' } },
+    paco: { skin: '#c68863', hair: '#3a2a1c', shirt: { id: 'n3', color: '#6b8f5a', style: 'plain' }, pants: { id: 'n3', color: '#b59a63' }, shoes: { id: 'n3', color: '#6b4226', type: 'shoe' }, hat: { id: 'n3', type: 'straw', color: '#e8cf8a', band: '#c0392b' } },
+    ines: { skin: '#8d5a3b', hair: '#151515', shirt: { id: 'n4', color: '#e0b030', color2: '#ffffff', style: 'hawaii' }, pants: { id: 'n4', color: '#d8342c', short: true }, shoes: { id: 'n4', color: '#2d9cdb', type: 'flip' }, hat: { id: 'n4', type: 'none' } },
+  };
   function drawNpc(ctx, n, E) {
-    const dx = G.P.x - n.x, dy = G.P.y - n.y, near = Math.hypot(dx, dy) < 130, hd = near ? Math.atan2(dy, dx) : Math.PI / 2 + Math.sin(E.t * 0.5 + n.ph) * 0.4;
-    G.World.drawPerson(ctx, n.x, n.y, hd, near ? 0 : E.t * 0.2, n, 1, 1.15);
-    ctx.font = '700 10px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.55)'; const tw = ctx.measureText(n.name).width + 10; ctx.fillRect(n.x - tw / 2, n.y - 30, tw, 13); ctx.fillStyle = '#fff'; ctx.fillText(n.name, n.x, n.y - 23);
+    const dx = G.P.x - n.x, dy = G.P.y - n.y, near = Math.hypot(dx, dy) < 150, dir = near ? PX.dirOf(Math.atan2(dy, dx)) : 0;
+    const bob = near ? 0 : Math.round(Math.sin(E.t * 1.6 + n.ph) * 0.6);
+    ctx.fillStyle = 'rgba(0,18,30,.28)'; ctx.fillRect(n.x - 12, n.y + 8, 24, 5); ctx.fillRect(n.x - 8, n.y + 13, 16, 2);
+    PX.drawAt(ctx, PX.person(NLOOK[n.id] || NLOOK.lucia, dir, 0), n.x, n.y + 14 + bob);
+    PX.worldText(ctx, n.name, n.x, n.y - 52, '#fff2c8');
   }
   function drawChest(ctx, E) {
-    const open = !chestReady(), x = CHEST.x, y = CHEST.y;
-    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(x + 2, y + 10, 16, 6, 0, 0, 6.3); ctx.fill();
-    ctx.fillStyle = '#7a4a22'; ctx.fillRect(x - 13, y - 6, 26, 15); ctx.fillStyle = '#a0642e'; ctx.fillRect(x - 13, y - (open ? 16 : 11), 26, open ? 6 : 7);
-    ctx.fillStyle = '#ffd36a'; ctx.fillRect(x - 2, y - 4, 4, 6); ctx.fillRect(x - 13, y - 2, 26, 2);
-    if (!open) { ctx.fillStyle = 'rgba(255,255,200,.9)'; const s = 3 + Math.sin(E.t * 4) * 1.5; ctx.fillRect(x + 8, y - 18 + Math.sin(E.t * 3) * 2, s, s); }
+    const open = !chestReady();
+    PX.drawAt(ctx, PX.chest(open), CHEST.x, CHEST.y + 14);
+    if (!open) { const k = Math.floor(E.t * 3) % 3; ctx.fillStyle = '#fffbd0'; const sx = [CHEST.x - 12, CHEST.x + 8, CHEST.x - 2][k], sy = [CHEST.y - 12, CHEST.y - 18, CHEST.y - 22][k]; ctx.fillRect(sx, sy, 4, 4); ctx.fillRect(sx - 2, sy + 1, 8, 2); ctx.fillRect(sx + 1, sy - 2, 2, 8); }
   }
+
+  /* patos, mariposas, luciérnagas, peces saltando, sombras de nubes */
+  const ducks = (function () { const out = [], r = U.rng(77); let n = 0, tries = 0; while (n < 16 && tries++ < 4000) { const tx = Math.floor(r() * MW), ty = Math.floor(r() * MH); if (tiles[ix(tx, ty)] === T.WATER && dist[ix(tx, ty)] >= 8) { out.push({ x: tx * TS + 16, y: ty * TS + 16, ph: r() * 6.3, sp: 0.25 + r() * 0.25 }); n++; } } return out; })();
+  const BFC = ['#ffd23a', '#ff8ab4', '#ffffff', '#8ac8ff', '#ffa040'];
+  function ambient(ctx, vis, E) {
+    const t = E.t, sn = G.season(), day = 1 - E.night;
+    // patos
+    for (const d of ducks) {
+      if (d.x < vis.x0 - 80 || d.x > vis.x1 + 80 || d.y < vis.y0 - 80 || d.y > vis.y1 + 80) continue;
+      let x = d.x + Math.cos(t * d.sp + d.ph) * 30, y = d.y + Math.sin(t * d.sp * 1.3 + d.ph) * 14; if (!isWater(x, y)) { x = d.x; y = d.y; }
+      const dir = -Math.sin(t * d.sp + d.ph) >= 0 ? 1 : -1, bob = Math.round(Math.sin(t * 3 + d.ph));
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(Math.round(x) - 14, Math.round(y) + 8, 28, 2);
+      PX.drawAt(ctx, PX.duck(dir), x, y + 8 + bob);
+    }
+    // peces que saltan cerca del jugador
+    const gx = Math.floor(G.P.x / 320) * 320, gy = Math.floor(G.P.y / 320) * 320;
+    for (let k = 0; k < 3; k++) {
+      const per = 3.3 + k * 0.9, tt = t + k * 1.7, id = Math.floor(tt / per), u = (tt % per) / per;
+      const x = gx - 160 + hash(id, k, 1) * 640, y = gy - 160 + hash(id, k, 2) * 640;
+      if (u > 0.3 || !isWater(x, y) || dist[ix(Math.floor(x / TS), Math.floor(y / TS))] < 6) continue;
+      const a = u / 0.3, hh = Math.sin(a * Math.PI) * 22;
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; const rr = Math.round(4 + a * 12); ctx.fillRect(Math.round(x) - rr, Math.round(y), rr * 2, 2);
+      PX.drawAt(ctx, PX.fishJump(), x, y - hh);
+    }
+    // mariposas (de día, primavera y verano)
+    if (sn < 2 && day > 0.5) for (let i = 0; i < 70; i++) {
+      const bx = hash(i, 1, 90) * MW * TS, by = hash(i, 2, 91) * MH * TS;
+      if (bx < vis.x0 - 40 || bx > vis.x1 + 40 || by < vis.y0 - 40 || by > vis.y1 + 40) continue;
+      const x = bx + Math.sin(t * 1.1 + i) * 22, y = by + Math.cos(t * 1.5 + i * 1.7) * 14;
+      if (!walkAt(x, y)) continue;
+      PX.drawAt(ctx, PX.butterfly(Math.floor(t * 7 + i) % 2, BFC[i % BFC.length]), x, y - 14 + Math.sin(t * 5 + i) * 2);
+    }
+    // luciérnagas de noche
+    if (E.night > 0.35 && sn !== 3) for (let i = 0; i < 80; i++) {
+      const bx = hash(i, 3, 92) * MW * TS, by = hash(i, 4, 93) * MH * TS;
+      if (bx < vis.x0 - 40 || bx > vis.x1 + 40 || by < vis.y0 - 40 || by > vis.y1 + 40) continue;
+      const x = Math.round(bx + Math.sin(t * 0.7 + i) * 26), y = Math.round(by + Math.cos(t * 0.9 + i * 1.3) * 18), bl = 0.5 + 0.5 * Math.sin(t * 2.4 + i * 2.1);
+      ctx.fillStyle = `rgba(255,240,120,${0.16 * bl * E.night})`; ctx.fillRect(x - 5, y - 5, 10, 10);
+      ctx.fillStyle = `rgba(255,248,170,${bl * E.night})`; ctx.fillRect(x, y, 2, 2);
+    }
+    // sombras de nubes
+    if (day > 0.4) for (let i = 0; i < 6; i++) {
+      const cx = ((hash(i, 5, 94) * MW * TS + t * (7 + i)) % (MW * TS + 600)) - 300, cy = hash(i, 6, 95) * MH * TS, w = 150 + hash(i, 7, 96) * 150, h = 70 + hash(i, 8, 97) * 50;
+      if (cx + w < vis.x0 || cx - w > vis.x1 || cy + h < vis.y0 || cy - h > vis.y1) continue;
+      ctx.fillStyle = `rgba(10,30,60,${0.1 * day})`; ctx.beginPath(); ctx.ellipse(Math.round(cx), Math.round(cy), w, h, 0, 0, 6.3); ctx.ellipse(Math.round(cx) + w * 0.5, Math.round(cy) + h * 0.2, w * 0.6, h * 0.7, 0, 0, 6.3); ctx.fill();
+    }
+    // pétalos, hojas y nieve
+    if (sn === 0 || sn === 2 || sn === 3) {
+      const cols = sn === 0 ? ['#ffc1d8', '#ff9fc2'] : sn === 2 ? ['#e0742a', '#c9501f', '#f0b43a'] : ['#ffffff', '#e8f3f9'];
+      for (let k = 0; k < 44; k++) {
+        const sp = sn === 3 ? 40 : 26, fx = vis.x0 + (hash(k, 1, 98) * (vis.x1 - vis.x0) + t * (sn === 3 ? 6 : 16)) % (vis.x1 - vis.x0), fy = vis.y0 + (hash(k, 2, 99) * (vis.y1 - vis.y0) + t * sp) % (vis.y1 - vis.y0);
+        ctx.fillStyle = cols[k % cols.length]; const s = sn === 3 ? 2 + (k % 2) * 2 : 4; ctx.fillRect(Math.round(fx + Math.sin(t * 1.3 + k) * 10), Math.round(fy), s, sn === 3 ? s : 2);
+      }
+    }
+  }
+
   function drawLand(ctx, vis, E) {
     const sn = G.season(), py = G.P.y;
-    for (const b of buildings) if (b.x + b.w > vis.x0 && b.x < vis.x1 && b.y + b.h > vis.y0 && b.y < vis.y1 && b.y + b.h <= py + 8) drawBuilding(ctx, b, E);
+    for (const b of buildings) if (b.x + b.w > vis.x0 && b.x < vis.x1 && b.y + b.h > vis.y0 - 60 && b.y < vis.y1 && b.y + b.h <= py + 8) drawBuilding(ctx, b, E);
+    drawDecor(ctx, vis, false);
     treeLayer(ctx, vis, sn, false);
     drawChest(ctx, E);
     for (const n of npcs) if (n.y <= py) drawNpc(ctx, n, E);
   }
   function drawTall(ctx, vis, E) {
     const sn = G.season(), py = G.P.y;
-    for (const b of buildings) if (b.x + b.w > vis.x0 && b.x < vis.x1 && b.y + b.h > vis.y0 && b.y < vis.y1 && b.y + b.h > py + 8) drawBuilding(ctx, b, E);
+    for (const b of buildings) if (b.x + b.w > vis.x0 && b.x < vis.x1 && b.y + b.h > vis.y0 - 60 && b.y < vis.y1 && b.y + b.h > py + 8) drawBuilding(ctx, b, E);
+    drawDecor(ctx, vis, true);
     for (const n of npcs) if (n.y > py) drawNpc(ctx, n, E);
     treeLayer(ctx, vis, sn, true);
-    // hojas que caen en otoño y nieve en invierno
-    if (sn === 2 || sn === 3) {
-      ctx.fillStyle = sn === 2 ? '#e0742a' : 'rgba(255,255,255,.85)';
-      for (let k = 0; k < 30; k++) { const fx = vis.x0 + ((k * 97 + E.t * (sn === 3 ? 18 : 30)) % (vis.x1 - vis.x0)), fy = vis.y0 + ((k * 53 + E.t * (sn === 3 ? 45 : 28)) % (vis.y1 - vis.y0)); ctx.fillRect(fx + Math.sin(E.t + k) * 8, fy, sn === 3 ? 3 : 4, sn === 3 ? 3 : 2); }
-    }
+    ambient(ctx, vis, E);
   }
 
   /* ---------------- Tesoro del islote y diálogos ---------------- */

@@ -12,16 +12,24 @@ window.G = window.G || {};
   const cam = { x: 520, y: 1000 };
   let vw = 0, vh = 0, dpr = 1, zoom = 1, baseZoom = 1, uz = 1;
   try { uz = U.clamp(parseFloat(localStorage.getItem('pesca-zoom')) || 1, 0.85, 2.2); } catch (e) {}
-  function setUz(v) { uz = U.clamp(v, 0.85, 2.2); zoom = baseZoom * uz; try { localStorage.setItem('pesca-zoom', uz.toFixed(2)); } catch (e) {} }
+  /* Gráficos retro: el lienzo se dibuja a baja resolución (1 píxel de arte = 2 px del mundo) y se amplía sin suavizar */
+  G.retro = (function () { try { return localStorage.getItem('pesca-gfx') !== 'smooth'; } catch (e) { return true; } })();
+  G.setRetro = (on) => { G.retro = !!on; try { localStorage.setItem('pesca-gfx', on ? 'retro' : 'smooth'); } catch (e) {} resize(); };
+  function setUz(v) { uz = U.clamp(v, 0.85, 2.2); zoom = baseZoom * uz; try { localStorage.setItem('pesca-zoom', uz.toFixed(2)); } catch (e) {} resize(); }
   G.zoomBy = (m) => setUz(uz * m);
   let running = false;
 
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, G.dprCap || 2);
     vw = window.innerWidth; vh = window.innerHeight;
-    canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
-    dark.width = canvas.width; dark.height = canvas.height;
     baseZoom = U.clamp(Math.min(vw / 560, vh / 640), 0.55, 1.35); zoom = baseZoom * uz;
+    if (G.retro) {
+      const A = Math.max(2, Math.round(zoom * 2));      // px de pantalla por píxel de arte (entero para que no tiemble)
+      zoom = A / 2; dpr = 1 / A;
+    } else dpr = Math.min(window.devicePixelRatio || 1, G.dprCap || 2);
+    canvas.width = Math.ceil(vw * dpr); canvas.height = Math.ceil(vh * dpr);
+    canvas.classList.toggle('pix', !!G.retro);
+    ctx.imageSmoothingEnabled = !G.retro;
+    dark.width = canvas.width; dark.height = canvas.height;
   }
   document.getElementById('btnZoomIn').addEventListener('click', () => G.zoomBy(1.2));
   document.getElementById('btnZoomOut').addEventListener('click', () => G.zoomBy(1 / 1.2));
@@ -231,7 +239,8 @@ window.G = window.G || {};
     }
     c.scale(G.PS, G.PS);
     if (!S.onPaddle) { c.fillStyle = 'rgba(0,0,0,0.25)'; c.beginPath(); c.ellipse(3, 6, 15, 12, 0, 0, 6.3); c.fill(); }
-    G.Char.legs(c, L, { ang: P.ang, walk: P.walk, moving: P.moving && !act, seated: S.onPaddle });
+    const pixBody = G.retro && !act && !S.onPaddle;
+    if (!pixBody) G.Char.legs(c, L, { ang: P.ang, walk: P.walk, moving: P.moving && !act, seated: S.onPaddle });
     // caña
     const using = F.state !== 'idle' && F.state !== 'result';
     const dtR = Math.min(0.1, Math.max(0, t - (P.rodT || t))); P.rodT = t;
@@ -260,7 +269,8 @@ window.G = window.G || {};
       const fishing = F.state !== 'idle' && F.state !== 'result';
       if (rk > 0.45) hands = { r: { x: dx * 13.5 - dy * 2, y: dy * 13.5 + dx * 2 }, l: fishing ? { x: dx * 26 + dy * 2, y: dy * 26 - dx * 2 } : null };
     }
-    G.Char.body(c, L, { ang: P.ang, walk: P.walk, moving: P.moving && !act, hands, twist });
+    if (pixBody) { c.save(); c.scale(1 / G.PS, 1 / G.PS); G.Pix.drawAt(c, G.Pix.person(L, G.Pix.dirOf(P.ang), G.Pix.frameOf(P.walk, P.moving)), 0, 11); c.restore(); }
+    else G.Char.body(c, L, { ang: P.ang, walk: P.walk, moving: P.moving && !act, hands, twist });
     c.restore();
     // estela en la tabla
     if (S.onPaddle && P.moving) {
@@ -339,7 +349,7 @@ window.G = window.G || {};
     cam.y = U.clamp(cam.y, vh / 2 / zoom, G.WORLD.h - vh / 2 / zoom);
     const vis = { x0: cam.x - vw / 2 / zoom - 20, x1: cam.x + vw / 2 / zoom + 20, y0: cam.y - vh / 2 / zoom - 20, y1: cam.y + vh / 2 / zoom + 20 };
 
-    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, (vw / 2 - cam.x * zoom) * dpr, (vh / 2 - cam.y * zoom) * dpr);
+    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, G.retro ? Math.round((vw / 2 - cam.x * zoom) * dpr) : (vw / 2 - cam.x * zoom) * dpr, G.retro ? Math.round((vh / 2 - cam.y * zoom) * dpr) : (vh / 2 - cam.y * zoom) * dpr);
     W.drawSea(ctx, vis, E);
     F.drawUnder(ctx);
     W.drawLand(ctx, vis, E);

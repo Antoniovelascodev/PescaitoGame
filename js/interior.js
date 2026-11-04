@@ -91,7 +91,7 @@ G.Interior = (function () {
 
   function draw(ctx, vw, vh, dpr) {
     const K = KINDS[I.kind]; if (!K) return;
-    const s = Math.min((vw * 0.97) / RW, (vh * 0.7) / RH), ox = (vw - RW * s) / 2, oy = Math.max(vh * 0.1, 40);
+    const s = Math.min((vw * 0.97) / RW, (vh * 0.56) / RH), ox = (vw - RW * s) / 2, oy = Math.max(vh * 0.21, 150);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#17110c'; ctx.fillRect(0, 0, vw, vh);
     ctx.setTransform(dpr * s, 0, 0, dpr * s, ox * dpr, oy * dpr);

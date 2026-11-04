@@ -18,26 +18,42 @@ G.UI = (function () {
   UI.modalOpen = () => !!ms || !$('dive').classList.contains('hidden') || !$('title').classList.contains('hidden');
 
   /* ---------- HUD ---------- */
+  /* Actualiza un chip del HUD: icono pixel (solo si cambia) y texto */
+  const chip = (id, icon, text) => {
+    const el = $(id), im = el.querySelector('img'), t = el.querySelector('b, span');
+    if (im.dataset.k !== icon) { im.dataset.k = icon; im.src = G.Pix.icon(icon); }
+    if (t.textContent !== text) t.textContent = text;
+  };
+  const BAIT_IC = { gusano: 'worm', gusano_ini: 'worm', sardina: 'sardine', cangrejo: 'crab' };
   UI.refreshHud = function () {
-    const S = G.S, e = G.env;
-    $('hMoney').textContent = '💶 ' + U.money(S.money);
-    const h = e.hour, ic = h >= 6 && h < 8.5 ? '🌅' : h >= 8.5 && h < 19 ? '☀️' : h >= 19 && h < 21 ? '🌇' : '🌙';
-    $('hClock').textContent = ic + ' ' + U.clock(h) + ' · ' + (G.mapId === 'valle' ? G.SEASON_ICON[G.season()] + ' ' + G.dateText() : 'Día ' + S.day);
-    $('hSwell').textContent = G.mapId === 'valle' ? '🌤️ Despejado' : '🌊 ' + G.SWELL_NAMES[S.swell];
-    const b = G.BAITS.find(x => x.id === S.eq.bait);
-    $('hBait').textContent = b.icon + ' ' + (S.baits[b.id] || 0);
+    const S = G.S, e = G.env, h = e.hour, valle = G.mapId === 'valle';
+    const night = h >= 20.5 || h < 6, twi = (h >= 6 && h < 8) || (h >= 18 && h < 20.5);
+    const ico = night ? 'moon' : twi ? 'sunset' : 'sun', ci = $('hClockIc');
+    if (ci.dataset.k !== ico) { ci.dataset.k = ico; ci.src = G.Pix.icon(ico); }
+    $('hTime').textContent = U.clock(h);
+    $('hDate').textContent = valle ? G.dateText() : 'Día ' + S.day;
+    const mi = $('hMoneyIc'); if (!mi.dataset.k) { mi.dataset.k = 1; mi.src = G.Pix.icon('coin'); }
+    $('hMoneyV').textContent = U.money(S.money);
     const mny = Math.round(S.money * 100) / 100;
     if (UI._lastMoney != null && mny > UI._lastMoney + 0.004) UI.moneyPop(mny - UI._lastMoney);
     UI._lastMoney = mny;
-    $('hGems').textContent = '💎 ' + (S.gems || 0);
+    const b = G.BAITS.find(x => x.id === S.eq.bait);
+    chip('hBait', BAIT_IC[b.id] || 'worm', String(S.baits[b.id] || 0));
+    chip('hCool', 'cooler', S.bag.length + '/' + G.coolerCap());
+    chip('hGems', 'gem', String(S.gems || 0));
+    if (valle) chip('hSwell', ['flower', 'sun', 'leaf', 'snow'][G.season()], ['Fresco', 'Cálido', 'Ventoso', 'Helado'][G.season()]);
+    else chip('hSwell', 'wave', G.SWELL_NAMES[S.swell]);
     if (G.Quests) {
-      const q = G.Quests.active()[0], hq = $('hQuest'), nr = G.Quests.readyCount();
+      const q = G.Quests.active()[0], nr = G.Quests.readyCount(), hq = $('hQuest');
       hq.classList.toggle('ready', nr > 0);
-      hq.textContent = nr ? '📜 ¡Misión lista! Reclama tu premio' : q ? '📜 ' + q.name + ' · ' + Math.floor(G.Quests.progress(q) * 10) / 10 + '/' + q.max : '📜 Misiones';
+      const txt = nr ? '¡Misión lista!' : q ? q.name + ' ' + Math.floor(G.Quests.progress(q) * 10) / 10 + '/' + q.max : 'Misiones';
+      const im = hq.querySelector('img'); if (!im.dataset.k) { im.dataset.k = 1; im.src = G.Pix.icon('scroll'); }
+      const sp = hq.querySelector('span'); if (sp.textContent !== txt) sp.textContent = txt;
       $('btnMenu').classList.toggle('dot', nr > 0);
     }
-    $('hCool').textContent = '🧊 ' + S.bag.length + '/' + G.coolerCap();
   };
+  /* iconos de los botones de la derecha */
+  (function () { for (const [id, ic] of [['btnMap', 'map'], ['btnMenu', 'gear'], ['btnZoomIn', 'plus'], ['btnZoomOut', 'minus']]) $(id).innerHTML = `<img class="pxi" src="${G.Pix.icon(ic)}" alt="">`; })();
   UI.moneyPop = function (d) {
     const box = $('moneyPops'); if (!box) return;
     const el = document.createElement('div'); el.className = 'mpop'; el.textContent = '+' + d.toFixed(2).replace('.', ',') + ' €';
