@@ -12,7 +12,7 @@ G.Fish = (function () {
   };
 
   const isNight = () => G.env.night > 0.5;
-  const modeNow = () => (G.S.onPaddle ? 'paddle' : 'orilla');
+  const modeNow = () => (G.S.onPaddle ? (G.mapId === 'isla' ? 'barco' : 'paddle') : 'orilla');
 
   /* ---- Selección de especie ---- */
   function litAt(x, y) {
@@ -28,7 +28,9 @@ G.Fish = (function () {
     const bi = G.BAIT_INDEX[G.S.eq.bait] || 0, night = isNight(), sw = G.env.swell, lit = litAt(x, y);
     const out = [];
     for (const sp of G.SPECIES) {
-      if (!sp.modes.includes(mode)) continue;
+      if (!(sp.modes.includes(mode) || (mode === 'barco' && sp.modes.includes('paddle')))) continue;
+      if (sp.isla && G.mapId !== 'isla') continue;
+      if (G.mapId === 'isla' && sp.fresh && !sp.isla) continue;
       if (h.depth < sp.dmin || h.depth > sp.dmax) continue;
       if (!!sp.fresh !== !!h.fresh) continue;
       if (sp.sea && G.season() >= 0 && !sp.sea.includes(G.season())) continue;
@@ -75,7 +77,7 @@ G.Fish = (function () {
     ];
     if (isNight() && G.S.owned.extras.includes('lampara')) parts.push(['Lámpara', 3]);
     if (G.env.swell > 0) parts.push(['Oleaje', -Math.round(G.env.swell * 1.5)]);
-    if (G.S.onPaddle) parts.push(['Tabla', -2]);
+    if (G.S.onPaddle && G.mapId !== 'isla') parts.push(['Tabla', -2]);
     let gear = Math.max(1, parts.reduce((a, p) => a + p[1], 0));
     // los peces grandes son mucho más duros y, si pesan más de lo que aguantan caña e hilo, es casi imposible
     const kg = U.lerp(sp.kg[0], sp.kg[1], Math.pow(sizeF, 1.6)), cap = Math.min(G.rod().cap, G.line().cap);

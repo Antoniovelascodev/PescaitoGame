@@ -60,7 +60,7 @@ window.G = window.G || {};
     G.S.time = G.env.hour; updateNight();
     G.S.gt = (G.S.gt || 0) + hrs;
     G.Stall.tick(hrs);
-    if (G.env.hour < prev && G.mapId === 'costa') newDay();
+    if (G.env.hour < prev && (G.mapId === 'costa' || G.mapId === 'isla')) newDay();
   };
 
   /* Medianoche: cambia el día (nuevo encargo del marinero y el mar puede cambiar) */
@@ -98,6 +98,7 @@ window.G = window.G || {};
   function ctxAction() {
     if (G.Fish.busy()) return null;
     const S = G.S, p = G.P;
+    { const ia = G.Island.ctx(); if (ia || G.mapId === 'isla') return ia || null; }
     // el marinero del puerto
     if (G.mapId === 'costa' && G.Sailor.near(p)) return { label: '⚓ Hablar con el marinero', run: () => G.UI.open('sailor') };
     if (G.mapId === 'valle') {
@@ -180,7 +181,7 @@ window.G = window.G || {};
     P.moving = false;
     if (P.stun > 0) P.stun -= dt;
     if (!P.act && !(P.stun > 0) && !locked && G.Fish.state !== 'wait' && G.Fish.state !== 'nibble' && I.mag > 0) {
-      const sp = (S.onPaddle ? 150 : 175) * I.mag;
+      const sp = (S.onPaddle ? (G.mapId === 'isla' ? 235 : 150) : 175) * I.mag;
       const nx = P.x + I.x * sp * dt, ny = P.y + I.y * sp * dt;
       const ok = (x, y) => S.onPaddle ? W.canPaddle(x, y) : W.canWalk(x, y, S.swell);
       const okx = ok(nx, P.y), oky = ok(P.x, ny);
@@ -199,6 +200,7 @@ window.G = window.G || {};
     G.Sailor.update(dt);
     G.Stall.update(dt);
     G.Story.gates(dt);
+    G.Island.update(dt);
 
     // contexto
     const c = ctxAction();
@@ -208,7 +210,8 @@ window.G = window.G || {};
     // lugar actual
     const zn = W.zoneAt(P.x, P.y);
     let spot = zn.name;
-    if (S.onPaddle) spot = `🏄 En la tabla · ${Math.round(W.depthAt(P.x, P.y))} m de la orilla`;
+    if (S.onPaddle && G.mapId === 'isla') spot = '⛵ ' + zn.name;
+    else if (S.onPaddle) spot = `🏄 En la tabla · ${Math.round(W.depthAt(P.x, P.y))} m de la orilla`;
     else if (W.inPier(P.x, P.y, 4)) spot = 'Espigón en T';
     else if (P.y > 1330 && zn.prom === 'paseo') spot = zn.name + ' · Tiendas';
     G.UI.setSpot(spot);
@@ -229,8 +232,9 @@ window.G = window.G || {};
   function drawPlayer(c) {
     const S = G.S, P = G.P, F = G.Fish, t = G.env.t;
     const L = G.Char.lookOf(), act = P.act;
-    c.save(); c.translate(P.x + (P.kx || 0), P.y + (P.ky || 0));
-    if (S.onPaddle) {
+    c.save(); c.translate(G.retro ? Math.round((P.x + (P.kx || 0)) / 2) * 2 : P.x + (P.kx || 0), G.retro ? Math.round((P.y + (P.ky || 0)) / 2) * 2 : P.y + (P.ky || 0));
+    if (S.onPaddle && G.mapId === 'isla') { c.save(); c.translate(-(P.x + (P.kx || 0)), -(P.y + (P.ky || 0))); G.Worlds.isla.drawBoat(c, P.x, P.y, P.ang, t, P.moving); c.restore(); }
+    else if (S.onPaddle) {
       c.save(); c.rotate(P.ang);
       const bob = Math.sin(t * 2) * 0.6;
       c.fillStyle = 'rgba(0,0,0,0.25)'; c.beginPath(); c.ellipse(4, 6, 46, 15, 0, 0, 6.3); c.fill();
@@ -275,7 +279,7 @@ window.G = window.G || {};
     else G.Char.body(c, L, { ang: P.ang, walk: P.walk, moving: P.moving && !act, hands, twist });
     c.restore();
     // estela en la tabla
-    if (S.onPaddle && P.moving) {
+    if (S.onPaddle && P.moving && G.mapId !== 'isla') {
       P.wakeT += 0.016;
       c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 2;
       for (const s of [-1, 1]) { c.beginPath(); c.moveTo(P.x - Math.cos(P.ang) * 40, P.y - Math.sin(P.ang) * 40); c.lineTo(P.x - Math.cos(P.ang + s * 0.3) * 90, P.y - Math.sin(P.ang + s * 0.3) * 90); c.stroke(); }
@@ -343,13 +347,13 @@ window.G = window.G || {};
     let lx = 0, ly = 0;
     if (F.state === 'charge' || F.state === 'wait' || F.state === 'nibble' || F.state === 'bite' || F.state === 'fight' || F.state === 'cast') {
       const T = F.state === 'charge' ? { x: P.x + Math.cos(F.aim) * G.rod().reach * PXM * 0.5 * (0.4 + F.power * 0.6), y: P.y + Math.sin(F.aim) * G.rod().reach * PXM * 0.5 * (0.4 + F.power * 0.6) } : F.target;
-      lx = (T.x - P.x) * 0.28; ly = (T.y - P.y) * 0.28;
+      lx = (T.x - P.x) * 0.14; ly = (T.y - P.y) * 0.14;
     }
-    const kl = 1 - Math.exp(-dt * 2.2);
+    const kl = 1 - Math.exp(-dt * 1.6);
     cam.lx = (cam.lx || 0) + (lx - (cam.lx || 0)) * kl; cam.ly = (cam.ly || 0) + (ly - (cam.ly || 0)) * kl;
     const tx = P.x + cam.lx, ty = P.y + cam.ly - (vh / zoom) * 0.04;
-    const k = 1 - Math.exp(-dt * 11);
-    cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
+    // la cámara va pegada al jugador (sin retraso): así no hay balanceo ni mareo al moverse
+    cam.x = tx; cam.y = ty;
     if (G.retro) { cam.x = Math.round(cam.x / 2) * 2; cam.y = Math.round(cam.y / 2) * 2; }
     cam.x = U.clamp(cam.x, vw / 2 / zoom, G.WORLD.w - vw / 2 / zoom);
     cam.y = U.clamp(cam.y, vh / 2 / zoom, G.WORLD.h - vh / 2 / zoom);

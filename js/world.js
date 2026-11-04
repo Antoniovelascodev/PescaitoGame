@@ -127,7 +127,14 @@ G.World = (function () {
     for (const p of PIERS) if (x > p.x0 + 8 && x < p.x1 - 8 && y > Math.max(tip, p.y0) && y < p.y1) return true;
     if (y > PROM_Y1 - 16) return false;
     for (const l of LANDMARKS) if (Math.hypot(x - l.x, y - l.y) < l.r) return false;
-    return y > shoreY(x) - 8 && !hitUmbrella(x, y) && !hitTowel(x, y);
+    return y > shoreY(x) - 8 && !hitUmbrella(x, y) && !hitTowel(x, y) && !hitProp(x, y);
+  }
+  /* palmeras y farolas del paseo: se rodean, no se atraviesan */
+  function hitProp(x, y) {
+    for (const p of palms) { if (Math.abs(p.x - x) > 22 || Math.abs(p.y - y) > 22) continue; if (Math.hypot(p.x - x, p.y + 4 - y) < 10 * p.s + 4) return true; }
+    for (const l of lamps) { if (Math.abs(l.x - x) > 16 || Math.abs(l.y - y) > 16) continue; if (Math.hypot(l.x - x, l.y - y) < 8) return true; }
+    for (const r of shoreRocks) { if (Math.abs(r.x - x) > r.r + 12 || Math.abs(r.y - y) > r.r + 12) continue; if (Math.hypot(r.x - x, r.y - y) < r.r * 0.62 + 4) return true; }
+    return false;
   }
   /* Toallas: rectángulo girado (18 x 30) algo ensanchado para el personaje */
   function hitTowel(x, y) {
@@ -207,6 +214,7 @@ G.World = (function () {
     const named = [
       { x: 600, w: 290, h: 215, label: 'FISHLIFE · ACUARIO', kind: 'fishlife', wall: '#d7eef7', awn: '#1d8fc9' },
       { x: 930, w: 200, label: 'NATURALISTAS · RESCATE', kind: 'nature', wall: '#e3f0dc', awn: '#2f8f4e' },
+      { x: 2340, w: 200, label: 'ASTILLERO · BARCOS', kind: 'boats', wall: '#dde9f2', awn: '#2a5d9e' },
       { x: 2860, w: 260, label: 'TIENDA DE PESCA', kind: 'fishing', wall: '#e4ecf7', awn: '#2d6fc4' },
       { x: 3180, w: 190, label: 'MODA MARINERA', kind: 'fashion', wall: '#f4e1ec', awn: '#c2477e' },
       { x: 3440, w: 210, h: 150, label: 'TU PESCADERÍA', kind: 'stall', wall: '#eef3f6', awn: '#2d7fc4' },
@@ -621,7 +629,7 @@ G.World = (function () {
     ctx.closePath();
   }
 
-  const ICON_OF = { fishing: 'rod', fashion: 'shirt', stall: 'fish', fishlife: 'fish', nature: 'shell', home: 'house' };
+  const ICON_OF = { boats: 'kayak', fishing: 'rod', fashion: 'shirt', stall: 'fish', fishlife: 'fish', nature: 'shell', home: 'house' };
 
   function drawCastleBody(ctx, b) {
     const { x, y, w, h } = b;
@@ -730,6 +738,8 @@ G.World = (function () {
       crate(L); crate(R); ic('worm', L - 6, 4, 20); ic('crab', L + 9, 3, 20); ic('sardine', R - 6, 4, 22); ic('cooler', R + 9, 3, 20);
       const cx = x + w / 2; ctx.fillStyle = '#6b4a2b'; ctx.fillRect(cx - 16, yy + 17, 32, 4); ctx.lineCap = 'round';
       for (let i = 0; i < 4; i++) { ctx.strokeStyle = ['#5a3b22', '#2d6fc4', '#c9a24a', '#2a2a2a'][i]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 12 + i * 8, yy + 18); ctx.lineTo(cx - 9 + i * 8, yy - 10); ctx.stroke(); }
+    } else if (b.kind === 'boats') {
+      ic('kayak', L, 6, 30); ic('anchor', R, 6, 24);
     } else if (b.kind === 'fishlife') {
       ic('fish', L, 4, 28); ic('sardine', R, 4, 28);
     } else if (b.kind === 'nature') {
@@ -805,10 +815,12 @@ G.World = (function () {
       ctx.save(); ctx.translate(r.x, r.y);
       ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.save(); ctx.translate(5, 6); rockShape(ctx, r.r, r.k, r.a); ctx.fill(); ctx.restore();
       rockShape(ctx, r.r, r.k, r.a);
-      ctx.fillStyle = G.TEX.patterns.stone; ctx.fill();
-      ctx.strokeStyle = 'rgba(25,22,20,0.55)'; ctx.lineWidth = 1.6; ctx.stroke();
-      ctx.save(); ctx.translate(-r.r * 0.15, -r.r * 0.15); ctx.scale(0.55, 0.55); rockShape(ctx, r.r, r.k, r.a);
-      ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fill(); ctx.restore();
+      ctx.fillStyle = '#7b786f'; ctx.fill();
+      ctx.strokeStyle = '#3f3b36'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.save(); ctx.translate(-r.r * 0.1, -r.r * 0.14); ctx.scale(0.8, 0.8); rockShape(ctx, r.r, r.k, r.a);
+      ctx.fillStyle = '#a4a097'; ctx.fill(); ctx.restore();
+      ctx.save(); ctx.translate(-r.r * 0.2, -r.r * 0.24); ctx.scale(0.42, 0.42); rockShape(ctx, r.r, r.k, r.a);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fill(); ctx.restore();
       ctx.restore();
     }
     // espigón de piedra en forma de T

@@ -250,7 +250,7 @@ window.G = window.G || {};
       ctx.restore();
     };
     if (G.mapId === 'valle') sign(3100, 1160, 'COSTA DEL SOL →');
-    else {
+    else if (G.mapId === 'costa') {
       sign(620, 1395, '← VALLE');
       const tg = Story.target(), b = tg && G.World.buildings.find(x => x.kind === tg);
       if (b) { const px = b.x + b.w / 2, py = b.y - 62 + Math.sin(t * 4) * 3; ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(px, py, 12, 0, 6.3); ctx.fill(); ctx.strokeStyle = '#7a5a00'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#4a3600'; ctx.font = '900 16px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', px, py + 1); }
@@ -334,12 +334,13 @@ window.G = window.G || {};
   UI.panels.map = {
     title: () => '🗺️ Mapa',
     init(ms) { ms.tab = G.mapId; },
-    tabs: () => [['costa', '🏖️ Costa del Sol'], ['valle', '🏞️ Valle del Pescador']],
+    tabs: () => [['costa', '🏖️ Costa'], ['valle', '🏞️ Valle'], ['isla', '🏝️ Isla']],
     body(ms) {
       const tab = ms.tab || G.mapId, m = Story.current(), tg = Story.target();
-      let h = `<div class="card" style="margin-bottom:8px"><div class="ds" style="line-height:1.45">${Story.needsChoice() ? '📜 <b>Elige tu camino</b> en Misiones: FishLife o Naturalistas.' : m ? `📜 <b>${m.title}</b>: ${m.desc}${m.where ? ` <span style="color:#ffd36a">📍 ${WHERE[m.where]}</span>` : ''}` : '📜 Sin historia pendiente.'}</div></div>`;
+      let h = `<div class="card" style="margin-bottom:8px"><div class="ds" style="line-height:1.45">${tab === 'isla' && G.Island.current() ? `⛵ <b>${G.Island.current().title}</b>: ${G.Island.current().desc}` : Story.needsChoice() ? '📜 <b>Elige tu camino</b> en Misiones: FishLife o Naturalistas.' : m ? `📜 <b>${m.title}</b>: ${m.desc}${m.where ? ` <span style="color:#ffd36a">📍 ${WHERE[m.where]}</span>` : ''}` : '📜 Sin historia pendiente.'}</div></div>`;
       h += `<div id="mapScroll" style="overflow-x:auto;border-radius:12px;margin-bottom:6px;-webkit-overflow-scrolling:touch"><canvas id="mapC"></canvas></div>`;
-      h += `<p class="ds" style="color:var(--mut);margin:0 2px 8px">🔴 tú · 🟡 misión · desliza el mapa. ${tab === 'costa' ? 'Para volver al valle camina hacia el oeste por el paseo de Benalmádena.' : 'Para ir a la costa sigue el camino principal hacia el este.'}</p>`;
+      h += `<p class="ds" style="color:var(--mut);margin:0 2px 8px">🔴 tú · 🟡 misión · desliza el mapa. ${tab === 'costa' ? 'Para volver al valle camina hacia el oeste por el paseo de Benalmádena.' : tab === 'valle' ? 'Para ir a la costa sigue el camino principal hacia el este.' : 'A la isla solo se llega navegando: compra un barco en el Astillero del puerto de Fuengirola.'}</p>`;
+      if (tab === 'isla') return h + '<p class="ds" style="text-align:center;color:var(--mut)">⛵ Sin viaje rápido: ¡hay que navegar! Zarpa desde el muelle del puerto de Fuengirola.</p>';
       const spots = G.Worlds[tab].SPOTS;
       h += `<div class="item"><div style="font-size:30px">🏪</div><div class="meta"><div class="nm">${tab === 'valle' ? 'Pueblo y tiendas' : 'Paseo de las tiendas'}</div><div class="ds">Tienda de pesca, moda, tu pescadería</div></div><button class="btn sm" data-act="st_travel" data-m="${tab}" data-v="tiendas">Ir</button></div>`;
       h += spots.map(s => { const lk = s.locked && !G.unlocked('cabopino'); return `<div class="item"><div style="font-size:30px">${s.icon}</div><div class="meta"><div class="nm">${s.name}</div><div class="ds">${s.sub}${lk ? ' · 🔒 misión «Explorador»' : ''}</div></div><button class="btn sm" data-act="st_travel" data-m="${tab}" data-v="${s.id}" ${lk ? 'disabled' : ''}>Ir</button></div>`; }).join('');
@@ -349,7 +350,7 @@ window.G = window.G || {};
     after(root, ms) {
       const cv = root.querySelector('#mapC'); if (!cv) return;
       const tab = ms.tab || G.mapId;
-      if (tab === 'costa') drawCosta(cv); else drawValle(cv);
+      if (tab === 'costa') drawCosta(cv); else if (tab === 'isla') G.Worlds.isla.drawMap(cv); else drawValle(cv);
       const sc = root.querySelector('#mapScroll');
       if (sc && tab === G.mapId) { const k = tab === 'costa' ? MAP_S : 4 / 32; sc.scrollLeft = Math.max(0, G.P.x * k - sc.clientWidth / 2); }
     },

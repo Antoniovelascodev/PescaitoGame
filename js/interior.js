@@ -14,6 +14,7 @@ G.Interior = (function () {
     fashion: { title: 'MODA MARINERA', wall: '#f4e1ec', floor: ['#d8b9c6', '#cfaebb'], awn: '#c2477e', shelf: ['shirt', 'pants', 'shoe', 'cap', 'shirt'], tl: 'shirt', tr: 'pants', hi: '¡Estás guapísimo, cariño!', go: () => G.UI.open('fashion'), cl: { skin: 0, hair: 2, shirt: 'sh4', pants: 'pa4', shoes: 'so4', hat: 'ha0' } },
     fishlife: { title: 'FISHLIFE · ACUARIO', wall: '#bfe6f5', floor: ['#9fc4d4', '#94b9c9'], awn: '#1d8fc9', shelf: ['fish', 'fish', 'fish', 'fish', 'shell'], tl: 'fish', tr: 'shell', tanks: 'fl', hi: 'Ayúdanos a reabrir el acuario…', go: () => G.UI.open('fishlife'), cl: { skin: 0, hair: 3, shirt: 'sh1', pants: 'pa1', shoes: 'so1', hat: 'ha0' } },
     nature: { title: 'NATURALISTAS · RESCATE', wall: '#d6ecd2', floor: ['#b4c9a0', '#a9be96'], awn: '#2f8f4e', shelf: ['shell', 'crab', 'fish', 'shell', 'lotion'], tl: 'shell', tr: 'crab', tanks: 'nat', hi: '¿Traes algún pez herido?', go: () => G.UI.open('nature'), cl: { skin: 2, hair: 1, shirt: 'sh2', pants: 'pa3', shoes: 'so2', hat: 'ha0' } },
+    boats:  { title: 'ASTILLERO · BARCOS', wall: '#d6e4ee', floor: ['#9fb4c0', '#94a9b5'], awn: '#2a5d9e', shelf: ['kayak', 'anchor', 'buoy', 'sonar', 'kayak'], tl: 'kayak', tr: 'buoy', hi: '¿Quieres navegar? El mar es enorme…', go: () => G.UI.open('boats'), cl: { skin: 2, hair: 0, shirt: 'sh6', pants: 'pa5', shoes: 'so1', hat: 'ha0' } },
     home:   { title: 'TU CASA', home: true, wall: '#f3e8d2', floor: ['#c9a679', '#bf9b6d'], awn: '#c2477e', shelf: [], hi: '' },
   };
 

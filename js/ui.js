@@ -237,7 +237,7 @@ G.UI = (function () {
     return '';
   }
 
-  const MODE_LBL = { orilla: '🏖️ Orilla', paddle: '🏄 Paddle / kayak', sub: '🤿 Submarina', barco: '🚤 Barco (próximamente)' };
+  const MODE_LBL = { orilla: '🏖️ Orilla', paddle: '🏄 Paddle / kayak', sub: '🤿 Submarina', barco: '🚤 Barco' };
   const MODE_ICO = { orilla: '🏖️', paddle: '🏄', sub: '🤿', barco: '🚤' };
   function albumBody() {
     if (ms.detail) {
@@ -262,7 +262,7 @@ G.UI = (function () {
     const ms2 = Object.keys(G.MILESTONES).map(Number).find(n => !G.S.milestones.includes(n));
     if (ms2) h += `<p class="ds" style="color:var(--mut);margin:4px 0">Próximo premio: ${ms2} especies → ${U.money(G.MILESTONES[ms2])}</p>`;
     h += '<div class="tabs" style="padding:0;margin:4px 0 2px">' + [['all', 'Todas'], ['orilla', '🏖️ Orilla'], ['paddle', '🏄 Paddle'], ['sub', '🤿 Submarina'], ['barco', '🚤 Barco']].map(c => `<button class="tab ${fl === c[0] ? 'on' : ''}" data-act="albfilter" data-v="${c[0]}">${c[1]}</button>`).join('') + '</div>';
-    if (fl === 'barco') h += '<p class="ds" style="color:var(--mut);margin:4px 0">Estas especies solo se pescan desde barco, que llegará próximamente.</p>';
+    if (fl === 'barco') h += '<p class="ds" style="color:var(--mut);margin:4px 0">Estas especies solo se pescan desde barco: cómpralo en el Astillero del puerto y navega hasta la Isla Esmeralda.</p>';
     for (const r of order) {
       const list = G.SPECIES.filter(s => s.rar === r && (fl === 'all' || s.modes.includes(fl)));
       if (!list.length) continue;

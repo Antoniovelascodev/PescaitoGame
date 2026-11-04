@@ -61,6 +61,7 @@ window.G = window.G || {};
   const grassType = (tx, ty) => { const n = vnoise(tx / 7, ty / 7) * 0.7 + vnoise(tx / 3, ty / 3) * 0.3; return n < 0.36 ? 1 : n > 0.66 ? 2 : 0; };
   const disc = (cx, cy, r, f) => { for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++) for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++) if (inMap(x, y) && Math.hypot(x + .5 - cx, y + .5 - cy) <= r) f(x, y); };
   const buildings = [], lamps = [], npcs = [], treeList = [];
+  let API_SOLIDS = [];
   const BX = { home: 7, fishing: 19, fashion: 31, stall: 37 };   // columna (tile) de cada edificio
   const BROW = 29, BH = 5;                                                       // fila superior y alto (tiles)
 
@@ -157,7 +158,8 @@ window.G = window.G || {};
   /* ---------------- Consultas ---------------- */
   const walkTile = (t) => t === T.GRASS || t === T.PATH || t === T.PLAZA || t === T.BRIDGE || t === T.SAND || t === T.FLOWER;
   const walkAt = (x, y) => walkTile(tileAt(Math.floor(x / TS), Math.floor(y / TS)));
-  function canWalk(x, y) { return walkAt(x, y) && walkAt(x - 7, y + 5) && walkAt(x + 7, y + 5); }
+  const solidAt = (x, y) => { const fy = y + 6; for (const o of API_SOLIDS) if (Math.hypot(x - o.x, fy - o.y) < o.r) return true; return false; };
+  function canWalk(x, y) { return walkAt(x, y) && walkAt(x - 7, y + 5) && walkAt(x + 7, y + 5) && !solidAt(x, y); }
   function freeSpot(x, y) {
     if (canWalk(x, y)) return { x, y };
     for (let r = 16; r <= 320; r += 16) for (let a = 0; a < 6.28; a += 0.4) { const nx = x + Math.cos(a) * r, ny = y + Math.sin(a) * r; if (canWalk(nx, ny)) return { x: nx, y: ny }; }
@@ -300,6 +302,7 @@ window.G = window.G || {};
   }
   for (const l of lamps) decor.push({ s: PX.lamp, x: l.x, y: l.y + 6 });
   decor.push({ s: PX.bench, x: 25 * TS, y: 36 * TS - 4 }, { s: PX.bench, x: 41 * TS, y: 36 * TS - 4 }, { s: PX.well, x: 36 * TS, y: 36 * TS - 6 });
+  API_SOLIDS = decor.map(d => ({ x: d.x, y: d.y, r: d.s === PX.well ? 22 : d.s === PX.bench ? 20 : d.s === PX.lamp ? 8 : 13 })).concat(npcs.map(n => ({ x: n.x, y: n.y + 6, r: 14 })));
   const drawDecor = (ctx, vis, front) => { const py = G.P.y; for (const d of decor) { if (d.x < vis.x0 - 60 || d.x > vis.x1 + 60 || d.y < vis.y0 - 20 || d.y > vis.y1 + 80) continue; if ((d.y > py) === front) PX.drawAt(ctx, d.s(), d.x, d.y); } };
 
   function drawBuilding(ctx, b, E) {
@@ -509,6 +512,7 @@ window.G = window.G || {};
   }
 
   const API = {
+    solids: null,
     kind: 'valle', TS, MW, MH, tileAt: (x, y) => tileAt(Math.floor(x / TS), Math.floor(y / TS)),
     buildings, lamps, npcs, SPOTS, PREP_SPAWN, HOME_DOOR, CHEST,
     PADDLE_SPAWN: { x: -9999, y: -9999 }, DIVE: { x: 0, y: 0 }, DIVES: [], PIERS: [], PIER: null, ZONES: [], LANDMARKS: [],
@@ -519,6 +523,7 @@ window.G = window.G || {};
     updateSchools() { }, schoolAt: () => null, swimmerAt: () => null, hitTowel: () => null, peopleNow: () => [], sunbathersNow: () => [], drawPerson: null,
     drawSea: drawGround, drawLand, drawBuoys() { }, drawTall, fishingLights() { },
   };
+  API.solids = API_SOLIDS;
   G.Worlds = G.Worlds || {};
   API.drawPerson = (...a) => G.Worlds.costa.drawPerson(...a);
   G.Worlds.valle = API;
@@ -539,6 +544,7 @@ window.G = window.G || {};
     Object.assign(G.WORLD, G.WORLDS_DIM[id]);
     G.BUOY_Y = id === 'costa' ? COSTA_BUOY : -1e9;
     if (id === 'valle' && G.S) { G.S.swell = 0; G.S.onPaddle = false; }
+    if (id === 'isla' && G.S) G.S.swell = 1;
     if (G.Fish) { G.Fish.state = 'idle'; G.Fish.cur = null; if (G.Fish.rings) G.Fish.rings.length = 0; }
     if (G.UI && G.UI.fishHud) G.UI.fishHud(null);
     if (spawn && G.P) { const s = G.Worlds[id].PREP_SPAWN, f = G.Worlds[id].freshSpot ? s : G.World.freeSpot(s.x, s.y); G.P.x = f.x; G.P.y = f.y; G.P.ang = Math.PI / 2; }
