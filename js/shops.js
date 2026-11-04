@@ -64,7 +64,7 @@ window.G = window.G || {};
     const sz = U.rand(0.08, 0.8);
     const cm = Math.max(sp.cm[0], Math.round(U.lerp(sp.cm[0], sp.cm[1], sz)));
     const kg = Math.max(sp.kg[0], Math.round(U.lerp(sp.kg[0], sp.kg[1], Math.pow(sz, 1.6)) * 0.97 * 1000) / 1000);
-    const value = kg * sp.eurKg, lucky = Math.random() < 0.12;
+    const value = kg * sp.eurKg * G.FISH_PRICE_MULT, lucky = Math.random() < 0.12;
     const asGems = Math.random() < 0.18;
     let amt, type;
     if (asGems) { type = 'gems'; amt = 1 + RI.indexOf(sp.rar) + (lucky ? 2 : 0) + (Math.random() < 0.4 ? 1 : 0); }
@@ -84,7 +84,7 @@ window.G = window.G || {};
     const out = [];
     for (const f of G.S.bag) {
       if (f.sp !== q.sp) continue;
-      const why = f.cm < q.cm ? 'Es demasiado pequeño' : f.kg < q.kg ? 'Pesa poco' : G.freshOf(f) < 35 ? 'Está pasado' : null;
+      const why = f.cm < q.cm ? 'Es demasiado pequeño' : f.kg < q.kg ? 'Pesa poco' : null;
       out.push({ f, why });
     }
     return out;
@@ -100,7 +100,7 @@ window.G = window.G || {};
       if (!ms.length) h += `<p class="ds" style="text-align:center;color:var(--mut)">No llevas ${sp.name.toLowerCase()} en la nevera. Sal a buscarlo y vuelve cuando lo tengas.</p>`;
       for (const m of ms) {
         const f = m.f;
-        h += `<div class="item">${UI.fishPh(sp.id, 52, false)}<div class="meta"><div class="nm">${sp.name}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)} · ${G.freshLabel(f)[0]} ${Math.round(G.freshOf(f))}%</div>${m.why ? `<div class="ds" style="color:#ff8a6b;font-weight:700">${m.why}</div>` : ''}</div><button class="btn sm" data-act="sail_give" data-v="${f.id}" ${m.why ? 'disabled' : ''}>Entregar</button></div>`;
+        h += `<div class="item">${UI.fishPh(sp.id, 52, false)}<div class="meta"><div class="nm">${sp.name}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)}</div>${m.why ? `<div class="ds" style="color:#ff8a6b;font-weight:700">${m.why}</div>` : ''}</div><button class="btn sm" data-act="sail_give" data-v="${f.id}" ${m.why ? 'disabled' : ''}>Entregar</button></div>`;
       }
       return h;
     },
@@ -109,7 +109,7 @@ window.G = window.G || {};
       const q = Sailor.quest(), i = G.S.bag.findIndex(f => f.id === d.v);
       if (i < 0 || q.done) return true;
       const f = G.S.bag[i];
-      if (f.cm < q.cm || f.kg < q.kg || G.freshOf(f) < 35) return true;
+      if (f.cm < q.cm || f.kg < q.kg) return true;
       G.S.bag.splice(i, 1); q.done = true;
       if (q.type === 'gems') { G.S.gems += q.amt; G.Audio.play('gem'); }
       else { G.S.money = Math.round((G.S.money + q.amt) * 100) / 100; G.S.stats.earned += q.amt; G.Audio.play('coin'); }

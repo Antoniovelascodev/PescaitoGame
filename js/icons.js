@@ -171,6 +171,11 @@ G.Icons = (function () {
     c.fillStyle = '#e6a52a'; c.fillRect(-6.5, -4, 13, 11); c.fillStyle = '#fff'; c.fillRect(-6.5, -6, 13, 3);
   };
 
+  D.house = (c) => {
+    rect(c, -11, -3, 22, 14, '#f6e3c4', 1); c.beginPath(); c.moveTo(-14, -2); c.lineTo(0, -13); c.lineTo(14, -2); c.closePath(); f(c, '#c4573a'); o(c);
+    rect(c, -3, 3, 6, 8, '#7a5230', 1); rect(c, -9, 0, 4, 4, '#8fd0e6', 1); rect(c, 5, 0, 4, 4, '#8fd0e6', 1);
+  };
+
   function draw(c, name, x, y, size, a) {
     const fn = D[name]; if (!fn) return;
     c.save(); c.translate(x, y); const s = (size || 28) / 30; c.scale(s, s);

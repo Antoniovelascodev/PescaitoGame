@@ -8,9 +8,7 @@ G.Stall = (function () {
   const COUNTER = { x: B.x + 105, y: 1643 };                  // mostrador en la cara sur, junto al parking
   const BAY_Y = 1680, BAY_X0 = B.x + 22, BAY_DX = 36, LANE_Y = 1750;
   const MAXSLOTS = 30, MAXBAYS = 6;
-  const AC_LOSS = [2.0, 1.4, 0.9, 0.5, 0.25];          // % de frescura que pierde el pescado por hora
   const UPG = {
-    ac: { name: 'Aire acondicionado', icon: '❄️', costs: [120, 350, 900, 2200], desc: l => `El pescado pierde ${AC_LOSS[l]}% de frescura por hora` + (l < 4 ? ` → ${AC_LOSS[l + 1]}%` : ' (máximo)') },
     sign: { name: 'Carteles y luces', icon: '🪧', costs: [90, 260, 700, 1800], desc: l => `Más clientes: ×${(1 + 0.35 * l).toFixed(2)}` + (l < 4 ? ` → ×${(1 + 0.35 * (l + 1)).toFixed(2)}` : ' (máximo)') },
     side: { name: 'Acera y aparcamiento', icon: '🅿️', costs: [150, 500, 1400], desc: l => `${3 + l} plazas de parking, clientes ×${(1 + 0.25 * l).toFixed(2)}` + (l < 3 ? ` → ${4 + l} plazas` : ' (máximo)') },
   };
@@ -23,8 +21,7 @@ G.Stall = (function () {
   const gt = () => G.S.gt || 0;
   const traffic = () => { const u = st().up; return 1 + 0.35 * u.sign + 0.25 * u.side; };
   const bays = () => 3 + st().up.side;
-  const lossPerHour = () => AC_LOSS[st().up.ac];
-  ST.traffic = traffic; ST.bays = bays; ST.loss = lossPerHour;
+  ST.traffic = traffic; ST.bays = bays;
 
   /* Probabilidad de que un pez a ratio r = precio / precio base se acabe vendiendo */
   ST.pBuy = (r) => r <= 1 ? 1 : Math.pow(U.clamp(1 - (r - 1) / 0.8, 0, 1), 1.4);
@@ -56,15 +53,6 @@ G.Stall = (function () {
   /* Avance del tiempo de juego  */
   ST.tick = function (hrs) {
     const s = st(); if (!s.slots.length) return;
-    const loss = lossPerHour() * hrs;
-    for (let i = s.slots.length - 1; i >= 0; i--) {
-      const l = s.slots[i];
-      l.f.fresh = Math.max(0, G.freshOf(l.f) - loss);
-      if (!l.res && (gt() - l.t0 >= 48 || l.f.fresh <= 0)) {
-        s.slots.splice(i, 1);
-        G.UI.toast('🗑️ Se ha estropeado ' + G.SPECIES_BY_ID[l.f.sp].name.toLowerCase() + ' en tu pescadería: lo tiras', 'warn');
-      }
-    }
     // clientes que ya tocan comprar
     const ready = s.slots.filter(l => !l.res && l.due <= gt());
     while (ready.length && ST.visits.length < bays() && s.slots.length) {
@@ -195,8 +183,7 @@ G.Stall = (function () {
   /* ---- Panel de la pescadería ---- */
   const UI = G.UI;
   const ratioOf = (l) => l.price / Math.max(0.01, ST.base(l.f));
-  const hoursLeft = (l) => Math.max(0, 48 - (gt() - l.t0));
-  const rowTop = (f) => { const sp = G.SPECIES_BY_ID[f.sp], fl = G.freshLabel(f); return `${UI.fishPh(sp.id, 52, false)}<div class="meta"><div class="nm">${sp.name}${f.hurt ? ' 🩹' : ''}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)} · <span style="color:${fl[1]};font-weight:800">${fl[0]} ${Math.round(G.freshOf(f))}%</span></div>`; };
+  const rowTop = (f) => { const sp = G.SPECIES_BY_ID[f.sp]; return `${UI.fishPh(sp.id, 52, false)}<div class="meta"><div class="nm">${sp.name}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)}</div>`; };
   const PRESETS = [90, 95, 100, 110, 120, 140];
   const pctControls = (mode, id, pct, extra, off) => `<div style="width:100%;margin-top:4px"><input type="range" class="rng" min="50" max="200" step="5" value="${pct}" id="sl_${id}" data-pct="${id}" data-mode="${mode}" ${off ? 'disabled' : ''}>
     <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">${PRESETS.map(p => `<button class="btn sm ghost" data-act="stall_pc" data-mode="${mode}" data-v="${id}" data-p="${p}">${p}%</button>`).join('')}<span style="margin-left:auto;display:flex;gap:5px">${extra}</span></div></div>`;
@@ -222,10 +209,10 @@ G.Stall = (function () {
       let h = `<div class="sum"><span>🐟 ${s.slots.length} / ${MAXSLOTS} puestos</span><span>Vendidos: ${s.sold || 0}</span></div>`;
       if (ms.tab === 'slots') {
         if (!s.slots.length) return h + `<p style="color:var(--mut);text-align:center;margin-top:24px;line-height:1.5">No tienes nada a la venta.<br>Pasa a «Poner pescado» y elige tu precio.<br>El pescado se vende mientras pescas y te pagan al momento.</p>`;
-        h += `<p class="ds" style="color:var(--mut);margin:0 2px 6px">Si lo pones a su precio justo se vende en menos de 2 horas de juego. Cuanto más caro, menos probable. El pescado dura 2 días en tu pescadería.</p>`;
+        h += `<p class="ds" style="color:var(--mut);margin:0 2px 6px">Si lo pones a su precio justo se vende en menos de 2 horas de juego. Cuanto más caro, menos probable.</p>`;
         for (const l of s.slots) {
           const d = ST.demand(l), r = ratioOf(l);
-          h += `<div class="item" style="flex-wrap:wrap">${rowTop(l.f)}<div id="pd_${l.id}" class="ds" style="color:${d.col};font-weight:800">${l.res ? '🛒 Un cliente lo está comprando…' : d.txt}</div><div class="ds">Precio justo ahora: ${U.money(ST.base(l.f))} · quedan ${Math.round(hoursLeft(l))} h</div></div>
+          h += `<div class="item" style="flex-wrap:wrap">${rowTop(l.f)}<div id="pd_${l.id}" class="ds" style="color:${d.col};font-weight:800">${l.res ? '🛒 Un cliente lo está comprando…' : d.txt}</div><div class="ds">Precio justo ahora: ${U.money(ST.base(l.f))}</div></div>
             <div style="text-align:right"><div id="pp_${l.id}" style="font-weight:900;font-size:17px">${U.money(l.price)}</div><div id="pc_${l.id}" class="ds">${Math.round(r * 100)}%</div></div>
             ${pctControls('slot', l.id, Math.round(r * 20) * 5, `<button class="btn sm warn" data-act="stall_take" data-v="${l.id}" ${l.res ? 'disabled' : ''}>Retirar</button>`, l.res)}</div>`;
         }
@@ -247,11 +234,11 @@ G.Stall = (function () {
       }
       // mejoras
       h += `<p class="ds" style="color:var(--mut);margin:0 2px 6px">Mejora tu pescadería para que el pescado aguante más, lleguen más clientes y haya más sitio donde aparcar.</p>`;
-      for (const k of ['ac', 'sign', 'side']) {
+      for (const k of ['sign', 'side']) {
         const U2 = UPG[k], lvl = s.up[k], max = U2.costs.length, cost = U2.costs[lvl];
         h += `<div class="item"><div style="font-size:30px">${U2.icon}</div><div class="meta"><div class="nm">${U2.name} · nivel ${lvl}/${max}</div><div class="ds">${U2.desc(lvl)}</div></div>${lvl >= max ? '<button class="btn sm ghost" disabled>Máx.</button>' : `<button class="btn sm" data-act="stall_up" data-v="${k}" ${S.money >= cost ? '' : 'disabled'}>${U.money(cost)}</button>`}</div>`;
       }
-      h += `<div class="item"><div style="font-size:30px">📈</div><div class="meta"><div class="nm">Afluencia actual: ×${traffic().toFixed(2)}</div><div class="ds">Plazas de parking: ${bays()} · pérdida de frescura: ${lossPerHour()}%/h</div></div></div>`;
+      h += `<div class="item"><div style="font-size:30px">📈</div><div class="meta"><div class="nm">Afluencia actual: ×${traffic().toFixed(2)}</div><div class="ds">Plazas de parking: ${bays()}</div></div></div>`;
       return h;
     },
     act(act, d, ms) {
