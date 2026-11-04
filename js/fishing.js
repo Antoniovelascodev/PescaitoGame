@@ -381,7 +381,7 @@ G.Fish = (function () {
       const sp = c.sp, s = c.sizeF;
       const cm = Math.round(U.lerp(sp.cm[0], sp.cm[1], s));
       const kg = Math.round(U.lerp(sp.kg[0], sp.kg[1], Math.pow(s, 1.6)) * 1000) / 1000;
-      const value = Math.round(kg * sp.eurKg * U.rand(0.92, 1.08) * 100) / 100;
+      const value = Math.round(kg * sp.eurKg * G.FISH_PRICE_MULT * U.rand(0.92, 1.08) * 100) / 100;
       const catchObj = { id: U.uid(), sp: sp.id, cm, kg, value, day: G.S.day };
       F.landed(catchObj);
     } else {
@@ -396,8 +396,6 @@ G.Fish = (function () {
     const rec = G.S.album[sp.id];
     const isNew = !rec;
     const isRecord = rec && (catchObj.kg > rec.maxKg);
-    catchObj.fresh = 100;
-    if (Math.random() < 0.125) { catchObj.fresh = Math.round(U.rand(50, 70)); catchObj.hurt = U.pick(['Mordido por otro pez', 'Herido en la lucha', 'Con la piel dañada', 'Mordisqueado por cangrejos']); }
     if (isNew) G.S.album[sp.id] = { n: 1, maxCm: catchObj.cm, maxKg: catchObj.kg, day: G.S.day };
     else { rec.n++; rec.maxCm = Math.max(rec.maxCm, catchObj.cm); rec.maxKg = Math.max(rec.maxKg, catchObj.kg); }
     G.S.stats.fish++;

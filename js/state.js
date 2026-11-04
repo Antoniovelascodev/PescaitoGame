@@ -12,7 +12,7 @@ window.G = window.G || {};
     bag: [], album: {}, shopLevel: 0, milestones: [],
     stats: { casts: 0, fish: 0, earned: 0, dives: 0, trash: 0 },
     pos: { x: 2945, y: 1420 }, onPaddle: false, board: null, worldV: 2,
-    tutorial: 0, muted: false, codes: [],
+    tutorial: 0, muted: false, codes: [], tank: [], unlocks: {}, quests: {},
   });
 
   G.newState = def;
@@ -64,17 +64,10 @@ window.G = window.G || {};
   /* Las tiendas están siempre abiertas */
   G.shopOpen = () => true;
 
-  /* Neveras y frescura */
+  /* Neveras: solo cuentan por su capacidad */
   G.cooler = () => G.COOLERS[G.S.cooler] || G.COOLERS[0];
   G.coolerCap = () => G.cooler().cap;
-  G.freshOf = (f) => (f.fresh == null ? 100 : f.fresh);
-  G.freshMult = (f) => Math.max(0.2, G.freshOf(f) / 100);
-  G.fishValue = (f) => Math.round(f.value * G.freshMult(f) * 100) / 100;
-  G.freshLabel = (f) => { const x = G.freshOf(f); return x >= 85 ? ['Fresquísimo', '#6df0b6'] : x >= 60 ? ['Fresco', '#b6f06d'] : x >= 35 ? ['Pasado', '#ffe27a'] : ['Malo', '#ff8a6b']; };
-  G.spoilBag = function (hrs) {
-    const loss = hrs * G.cooler().loss;
-    for (const f of G.S.bag) f.fresh = Math.max(0, G.freshOf(f) - loss);
-  };
+  G.fishValue = (f) => Math.round(f.value * 100) / 100;
 
   /* Venta */
   G.sellMult = (dest) => dest === 'lonja' ? G.SUPPLIER_MULT : G.SHOP_LEVELS[G.S.shopLevel].mult * (1 + G.S.market.pct / 100);

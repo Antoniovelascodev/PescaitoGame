@@ -73,7 +73,7 @@ G.World = (function () {
     { id: 'bombo', name: 'El Bombo', sub: 'Arena', x: 8450, y: 0, icon: '🥁' },
     { id: 'posidonia', name: 'Posidonia y chiringuitos', sub: 'Posidonia', x: 8950, y: 0, icon: '🌿' },
     { id: 'piedra', name: 'Playa de piedra', sub: 'Piedra', x: 9600, y: 0, icon: '⚫' },
-    { id: 'cabopino', name: 'Puerto de Cabopino', sub: 'Bloqueado', x: 9850, y: 0, icon: '⚓', locked: true },
+    { id: 'cabopino', name: 'Puerto de Cabopino', sub: 'Puerto', x: 9850, y: 0, icon: '⚓', locked: true },
   ];
   for (const s of SPOTS) if (!s.y) s.y = shoreY(s.x) + 70;
   function nearestSpot(x) { let b = null, bd = 1e9; for (const s of SPOTS) { if (s.locked) continue; const d = Math.abs(s.x - x); if (d < bd) { bd = d; b = s; } } return b; }
@@ -208,6 +208,7 @@ G.World = (function () {
       { x: 600, w: 290, h: 215, label: 'ANIMALLIFE · ACUARIO', kind: 'animal', wall: '#d7eef7', awn: '#1d8fc9' },
       { x: 920, w: 170, label: 'PUERTO · KAYAKS', kind: 'kayak', wall: '#dde9f2', awn: '#2a5d9e' },
       { x: 1640, w: 170, label: 'ARPÓN Y BUCEO', kind: 'spear', wall: '#f7e6d3', awn: '#e07a2b' },
+      { x: 2672, w: 170, label: 'TU CASA', kind: 'home', wall: '#f6e3c4', awn: '#c2477e' },
       { x: 2860, w: 170, label: 'EL CEBO · BÁSICOS', kind: 'bait', wall: '#e7f1df', awn: '#2f9e5b' },
       { x: 3038, w: 170, label: 'PESCA EL ANZUELO', kind: 'rods', wall: '#e4ecf7', awn: '#2d6fc4' },
       { x: 3216, w: 170, label: 'PADDLE SURF', kind: 'paddle', wall: '#def3f3', awn: '#1fb5c4' },
@@ -606,7 +607,7 @@ G.World = (function () {
     ctx.closePath();
   }
 
-  const ICON_OF = { bait: 'worm', rods: 'rod', spear: 'mask', paddle: 'board', kayak: 'kayak', fashion: 'shirt', stall: 'fish', lonja: 'anchor', animal: 'whale' };
+  const ICON_OF = { bait: 'worm', rods: 'rod', spear: 'mask', paddle: 'board', kayak: 'kayak', fashion: 'shirt', stall: 'fish', lonja: 'anchor', animal: 'whale', home: 'house' };
 
   function drawCastleBody(ctx, b) {
     const { x, y, w, h } = b;
@@ -692,7 +693,7 @@ G.World = (function () {
       if (b.kind === 'castle') return;
       const open = G.shopOpen(b.kind);
       ctx.font = '700 10px system-ui'; ctx.fillStyle = open ? '#2fbf7a' : '#e0584a';
-      ctx.fillText(open ? 'ABIERTO' : 'CERRADO', x + w / 2, y + 78);
+      ctx.fillText(b.kind === 'home' ? 'TU HOGAR' : open ? 'ABIERTO' : 'CERRADO', x + w / 2, y + 78);
       if (open) {
         const bob = Math.sin(G.env.t * 4) * 3;
         ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(x + w / 2 - 9, y - 40 + bob); ctx.lineTo(x + w / 2 + 9, y - 40 + bob); ctx.lineTo(x + w / 2, y - 24 + bob); ctx.closePath(); ctx.fill();

@@ -48,7 +48,6 @@ window.G = window.G || {};
     const prev = G.env.hour;
     G.env.hour = (prev + hrs) % 24;
     G.S.elapsed += hrs;
-    G.spoilBag(hrs);
     G.S.time = G.env.hour; updateNight();
     G.S.gt = (G.S.gt || 0) + hrs;
     G.Stall.tick(hrs);
@@ -152,8 +151,8 @@ window.G = window.G || {};
     if (paused) return;
     if (G.Interior.active) { G.Interior.update(dt); return; }
 
-    // reloj continuo: 1 hora de juego = 15 s
-    G.addTime(dt / 15);
+    // reloj continuo: de día 1 hora de juego = 30 s; de noche (21:00-06:00) = 7,5 s
+    { const hh = E.hour; G.addTime(dt / (hh >= 21 || hh < 6 ? 7.5 : 30)); }
     W.updateSchools(E.t, G.Fish.state !== 'idle' ? G.Fish.target : null);
     G.UI.syncDayButton();
 
@@ -206,7 +205,7 @@ window.G = window.G || {};
     // refresco ligero del HUD
     tutorialMark += dt; achT += dt;
     if (tutorialMark > 0.5) { tutorialMark = 0; G.UI.refreshHud(); }
-    if (achT > 2) { achT = 0; G.Ach.check(); }
+    if (achT > 2) { achT = 0; G.Ach.check(); G.Quests.check(); }
   }
 
   /* ---------- Dibujo ---------- */

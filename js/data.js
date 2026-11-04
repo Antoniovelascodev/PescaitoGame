@@ -84,24 +84,24 @@ G.RODS = [
   { id: 'r1', name: 'Telescópica', reach: 45, pts: 8, price: 70 },
   { id: 'r2', name: 'Spinning ligera', reach: 65, pts: 14, price: 220 },
   { id: 'r3', name: 'Surfcasting 4,2 m', reach: 100, pts: 22, price: 650 },
-  { id: 'r4', name: 'Surfcasting Pro', reach: 145, pts: 32, price: 1700 },
-  { id: 'r5', name: 'Carbono Élite', reach: 190, pts: 45, price: 4200 },
+  { req: 'deep', id: 'r4', name: 'Surfcasting Pro', reach: 145, pts: 32, price: 1700 },
+  { req: 'pro', id: 'r5', name: 'Carbono Élite', reach: 190, pts: 45, price: 4200 },
 ];
 G.LINES = [
   { id: 'l0', name: 'Nylon 0,18', pts: 3, price: 0, tension: 1.25 },
   { id: 'l1', name: 'Nylon 0,28', pts: 7, price: 40, tension: 1.05 },
   { id: 'l2', name: 'Fluorocarbono 0,35', pts: 13, price: 140, tension: 0.9 },
   { id: 'l3', name: 'Trenzado 0,25', pts: 20, price: 480, tension: 0.75 },
-  { id: 'l4', name: 'Trenzado 0,40', pts: 30, price: 1300, tension: 0.6 },
-  { id: 'l5', name: 'Trenzado marino', pts: 42, price: 3300, tension: 0.48 },
+  { req: 'deep', id: 'l4', name: 'Trenzado 0,40', pts: 30, price: 1300, tension: 0.6 },
+  { req: 'pro', id: 'l5', name: 'Trenzado marino', pts: 42, price: 3300, tension: 0.48 },
 ];
 G.HOOKS = [
   { id: 'h0', name: 'Anzuelo nº 12', pts: 3, price: 0, tier: 0 },
   { id: 'h1', name: 'Anzuelo nº 9', pts: 6, price: 25, tier: 1 },
   { id: 'h2', name: 'Anzuelo nº 6', pts: 10, price: 90, tier: 2 },
   { id: 'h3', name: 'Anzuelo nº 4', pts: 16, price: 300, tier: 3 },
-  { id: 'h4', name: 'Anzuelo nº 2', pts: 24, price: 900, tier: 4 },
-  { id: 'h5', name: 'Anzuelo nº 1', pts: 34, price: 2200, tier: 5 },
+  { req: 'deep', id: 'h4', name: 'Anzuelo nº 2', pts: 24, price: 900, tier: 4 },
+  { req: 'pro', id: 'h5', name: 'Anzuelo nº 1', pts: 34, price: 2200, tier: 5 },
 ];
 G.BAITS = [
   { id: 'gusano', name: 'Gusanos', pts: 2, price: 1.25, pack20: 22, icon: '🪱', ico: 'worm', tier: 1, wait: 1.55, maxRar: 1, desc: 'Baratos, pero tardan en picar y solo atraen peces comunes y poco comunes.' },
@@ -117,7 +117,7 @@ G.SPEARS = [
   { id: 's0', name: 'Arpón de banda 40', pts: 8, range: 3, price: 200 },
   { id: 's1', name: 'Arpón de banda 60', pts: 14, range: 4, price: 420 },
   { id: 's2', name: 'Arpón de banda 90', pts: 22, range: 5.5, price: 1100 },
-  { id: 's3', name: 'Arpón Pro 120', pts: 34, range: 7, price: 2800 },
+  { req: 'pro', id: 's3', name: 'Arpón Pro 120', pts: 34, range: 7, price: 2800 },
 ];
 G.DIVE_GEAR = [
   { id: 'gafas', name: 'Gafas de bucear', price: 45, icon: '🥽', ico: 'mask' },
@@ -126,7 +126,7 @@ G.DIVE_GEAR = [
 ];
 G.EXTRAS = [
   { id: 'lampara', name: 'Lámpara de pesca', price: 160, icon: '🔦', ico: 'lamp', desc: 'De noche es tu única luz fuerte: ilumina el agua, deja ver los bancos y atrae calamares y sepias. +3 puntos.' },
-  { id: 'paddle', name: 'Tabla de paddle surf', price: 900, icon: '🏄', ico: 'board', desc: 'Recorre toda la costa hasta las boyas de 200 m y pesca desde la tabla.' },
+  { req: 'tabla', id: 'paddle', name: 'Tabla de paddle surf', price: 900, icon: '🏄', ico: 'board', desc: 'Recorre toda la costa hasta las boyas de 200 m y pesca desde la tabla.' },
 ];
 
 /* Economía */
@@ -140,18 +140,19 @@ G.SHOP_LEVELS = [
 ];
 /* Códigos de regalo (canjeables una sola vez por partida, desde Ajustes) */
 G.GIFT_CODES = { DORADA: { money: 1000 }, CALUM: { money: 1000 } };
+G.FISH_PRICE_MULT = 0.8;   // ajuste global del valor de los peces (€/kg de cada especie × esto)
 G.SUPPLIER_MULT = 0.9;
 G.SELL_BACK = 0.5;   // al revender equipo te dan la mitad de lo que costó
-/* Neveras: capacidad y % de frescura que pierde cada pez por hora de juego */
+/* Neveras: capacidad */
 G.COOLERS = [
-  { id: 'c0', name: 'Nevera de playa', cap: 3, loss: 6, price: 0 },
-  { id: 'c1', name: 'Nevera portátil', cap: 5, loss: 4.5, price: 60 },
-  { id: 'c2', name: 'Nevera con hielo', cap: 10, loss: 3, price: 220 },
-  { id: 'c3', name: 'Nevera grande', cap: 20, loss: 2, price: 700 },
-  { id: 'c4', name: 'Nevera industrial', cap: 40, loss: 1.2, price: 2200 },
-  { id: 'c5', name: 'Arcón frigorífico', cap: 80, loss: 0.6, price: 6500 },
-  { id: 'c6', name: 'Nevera Criogénica', cap: 120, loss: 0.3, gems: 30 },
-  { id: 'c7', name: 'Nevera Abisal', cap: 250, loss: 0.1, gems: 75 },
+  { id: 'c0', name: 'Nevera de playa', cap: 3, price: 0 },
+  { id: 'c1', name: 'Nevera portátil', cap: 5, price: 60 },
+  { id: 'c2', name: 'Nevera con hielo', cap: 10, price: 220 },
+  { id: 'c3', name: 'Nevera grande', cap: 20, price: 700 },
+  { id: 'c4', name: 'Nevera industrial', cap: 40, price: 2200 },
+  { id: 'c5', name: 'Arcón frigorífico', cap: 80, price: 6500 },
+  { id: 'c6', name: 'Nevera Criogénica', cap: 120, gems: 30 },
+  { id: 'c7', name: 'Nevera Abisal', cap: 250, gems: 75 },
 ];
 G.MILESTONES = { 10: 100, 20: 400, 30: 1000, 40: 2500, 47: 10000 };
 G.SWELL_NAMES = ['Calma', 'Marejadilla', 'Marejada', 'Temporal'];

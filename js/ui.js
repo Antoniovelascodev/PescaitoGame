@@ -30,6 +30,12 @@ G.UI = (function () {
     if (UI._lastMoney != null && mny > UI._lastMoney + 0.004) UI.moneyPop(mny - UI._lastMoney);
     UI._lastMoney = mny;
     $('hGems').textContent = '💎 ' + (S.gems || 0);
+    if (G.Quests) {
+      const q = G.Quests.active()[0], hq = $('hQuest'), nr = G.Quests.readyCount();
+      hq.classList.toggle('ready', nr > 0);
+      hq.textContent = nr ? '📜 ¡Misión lista! Reclama tu premio' : q ? '📜 ' + q.name + ' · ' + Math.floor(G.Quests.progress(q) * 10) / 10 + '/' + q.max : '📜 Misiones';
+      $('btnMenu').classList.toggle('dot', nr > 0);
+    }
     $('hCool').textContent = '🧊 ' + S.bag.length + '/' + G.coolerCap();
   };
   UI.moneyPop = function (d) {
@@ -183,12 +189,12 @@ G.UI = (function () {
     const S = G.S;
     if (ms.tab === 'capturas') {
       const cl = G.cooler();
-      const head = `<div class="card" style="margin-bottom:8px"><div class="lbl"><span>🧊 ${cl.name}</span><span>−${cl.loss}% de frescura por hora</span></div>${S.stats.trash ? `<div class="ds" style="color:var(--mut);margin-top:4px">♻️ Basuras retiradas del mar: ${S.stats.trash}</div>` : ''}</div>`;
+      const head = `<div class="card" style="margin-bottom:8px"><div class="lbl"><span>🧊 ${cl.name}</span><span>Caben ${cl.cap} peces</span></div>${S.stats.trash ? `<div class="ds" style="color:var(--mut);margin-top:4px">♻️ Basuras retiradas del mar: ${S.stats.trash}</div>` : ''}</div>`;
       if (!S.bag.length) return head + `<p style="color:var(--mut);text-align:center;margin-top:30px">Tu nevera está vacía.<br>¡Lanza la caña y pesca algo! 🎣</p>`;
       let tot = 0; S.bag.forEach(f => tot += G.fishValue(f));
       const rows = S.bag.slice().sort((a, b) => G.fishValue(b) - G.fishValue(a)).map(f => {
-        const sp = G.SPECIES_BY_ID[f.sp], fl = G.freshLabel(f);
-        return `<div class="item">${fishPh(sp.id, 62)}<div class="meta"><div class="nm">${sp.name} ${rarChip(sp.rar)}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)}</div><div class="ds" style="color:${fl[1]};font-weight:800">${fl[0]} ${Math.round(G.freshOf(f))}%${f.hurt ? ' · 🩹 ' + f.hurt.toLowerCase() : ''}</div></div><div style="text-align:right;font-weight:800">${U.money(G.fishValue(f))}<div class="ds">ahora (base ${U.money(f.value)})</div><button class="btn sm ghost" style="margin-top:4px" data-act="release" data-v="${f.id}">Soltar</button></div></div>`;
+        const sp = G.SPECIES_BY_ID[f.sp];
+        return `<div class="item">${fishPh(sp.id, 62)}<div class="meta"><div class="nm">${sp.name} ${rarChip(sp.rar)}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)}</div></div><div style="text-align:right;font-weight:800">${U.money(G.fishValue(f))}<button class="btn sm ghost" style="margin-top:4px" data-act="release" data-v="${f.id}">Soltar</button></div></div>`;
       }).join('');
       return head + `<div class="sum"><span>${S.bag.length}/${G.coolerCap()} peces</span><span>Valor actual ${U.money(tot)}</span></div>${rows}<p class="ds" style="text-align:center;color:var(--mut)">Véndelos en las tiendas del paseo. Cuanto más tiempo pasan, menos valen.</p>`;
     }
@@ -261,8 +267,14 @@ G.UI = (function () {
   }
 
   /* ----- Tienda ----- */
+  /* Objetos que se desbloquean con una misión: devuelve la misión que falta, o null */
+  function lockedBy(k, v) {
+    const pool = { rods: G.RODS, lines: G.LINES, hooks: G.HOOKS, spears: G.SPEARS, gear: G.DIVE_GEAR, extras: G.EXTRAS }[k], it = pool && pool.find(x => x.id === v);
+    return it && it.req && !G.unlocked(it.req) ? (G.Quests.list.find(q => q.unlock === it.req) || { name: 'Misión' }) : null;
+  }
   function priceBtn(price, owned, afford, act, data) {
     if (owned) return `<button class="btn sm ghost" disabled>Tuyo</button>`;
+    if (act === 'buy') { const m = /data-k="(\w+)" data-v="(\w+)"/.exec(data || ''), lk = m && lockedBy(m[1], m[2]); if (lk) return `<button class="btn sm ghost" disabled>🔒 ${lk.name}</button>`; }
     return `<button class="btn sm" data-act="${act}" ${data} ${afford ? '' : 'disabled'}>${U.money(price)}</button>`;
   }
   function tradeBtn(price, owned, afford, kind, id) {
@@ -282,9 +294,9 @@ G.UI = (function () {
     if (t === 'hilos') return `<p class="ds" style="color:var(--mut)">Un hilo mejor suma puntos y aguanta mejor los tirones.</p>` + list(G.LINES, S.owned.lines, 'lines', x => `+${x.pts} pts · aguanta ${Math.round(100 / x.tension)}% · hasta ${x.cap} kg`, 'line');
     if (t === 'anzuelos') return `<p class="ds" style="color:var(--mut)"><b>Cuanto MENOR es el número del anzuelo, MAYOR es el pez que coge.</b> El nº 12 es para peces pequeños y el nº 1 para los más grandes. Puedes cambiar de anzuelo en Inventario → Equipo.</p>` + list(G.HOOKS, S.owned.hooks, 'hooks', x => `+${x.pts} pts · peces de ${hookRange(x)}`, 'hook');
     if (t === 'cebos') return `<p class="ds" style="color:var(--mut)">Los cebos no caducan: lo que compres lo conservas para siempre. Mejor cebo = pica antes y atrae mejores peces.</p>` + G.BAITS.filter(b => !b.starter).map(b => `<div class="item">${G.Icons.html(b.ico || 'worm', 40)}<div class="meta"><div class="nm">${b.name} <span class="ds">(tienes ${S.baits[b.id] || 0})</span></div><div class="ds">${b.desc} +${b.pts} pts</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="btn sm" data-act="buybait" data-v="${b.id}" data-n="5" ${can(b.price * 5) ? '' : 'disabled'}>5 · ${U.money(b.price * 5)}</button><button class="btn sm" data-act="buybait" data-v="${b.id}" data-n="20" ${can(b.pack20) ? '' : 'disabled'}>20 · ${U.money(b.pack20)}</button></div></div>`).join('');
-    if (t === 'neveras') return `<p class="ds" style="color:var(--mut)">Aquí guardas lo que pescas hasta venderlo. Las mejores neveras caben más peces y los mantienen frescos más tiempo.</p>` + G.COOLERS.map((c, i) => {
+    if (t === 'neveras') return `<p class="ds" style="color:var(--mut)">Aquí guardas lo que pescas hasta venderlo. Las mejores neveras caben más peces.</p>` + G.COOLERS.map((c, i) => {
       const owned = i <= S.cooler;
-      return `<div class="item ${i === S.cooler ? 'on' : ''}">${G.Icons.html('cooler', 36)}<div class="meta"><div class="nm">${c.name}</div><div class="ds">Caben ${c.cap} peces · pierden ${c.loss}% de frescura por hora</div></div>${c.gems ? (owned ? '<button class="btn sm ghost" disabled>Tuya</button>' : `<button class="btn sm" style="background:linear-gradient(160deg,#8a5cf0,#5a35c0)" data-act="buycooler" data-v="${i}" ${S.gems >= c.gems ? '' : 'disabled'}>💎 ${c.gems}</button>`) : priceBtn(c.price, owned, can(c.price), 'buycooler', `data-v="${i}"`)}</div>`;
+      return `<div class="item ${i === S.cooler ? 'on' : ''}">${G.Icons.html('cooler', 36)}<div class="meta"><div class="nm">${c.name}</div><div class="ds">Caben ${c.cap} peces</div></div>${c.gems ? (owned ? '<button class="btn sm ghost" disabled>Tuya</button>' : `<button class="btn sm" style="background:linear-gradient(160deg,#8a5cf0,#5a35c0)" data-act="buycooler" data-v="${i}" ${S.gems >= c.gems ? '' : 'disabled'}>💎 ${c.gems}</button>`) : priceBtn(c.price, owned, can(c.price), 'buycooler', `data-v="${i}"`)}</div>`;
     }).join('');
     if (t === 'buceo') {
       let h = `<p class="ds" style="color:var(--mut)">Para la pesca submarina necesitas gafas, aletas, neopreno y un arpón. Sal por la zona de buceo de las rocas.</p><div class="sec">Equipo básico</div>`;
@@ -314,8 +326,8 @@ G.UI = (function () {
     let tot = 0; S.bag.forEach(f => tot += G.fishValue(f));
     h += `<div class="sec">Vender todo (${S.bag.length} peces)</div><button class="btn" style="width:100%;margin-bottom:6px" data-act="sellall" data-v="${dest}">💶 Vender todo por ${U.money(tot * mult)}</button><div class="sec">Uno a uno</div>`;
     h += S.bag.slice().sort((a, b) => G.fishValue(b) - G.fishValue(a)).map(f => {
-      const sp = G.SPECIES_BY_ID[f.sp], fl = G.freshLabel(f);
-      return `<div class="item">${fishPh(sp.id, 52)}<div class="meta"><div class="nm">${sp.name}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)}</div><div class="ds" style="color:${fl[1]};font-weight:800">${fl[0]} ${Math.round(G.freshOf(f))}%${f.hurt ? ' · 🩹 ' + f.hurt.toLowerCase() : ''}</div></div><button class="btn sm" data-act="sell" data-v="${f.id}" data-d="${dest}">${U.money(G.fishValue(f) * mult)}</button></div>`;
+      const sp = G.SPECIES_BY_ID[f.sp];
+      return `<div class="item">${fishPh(sp.id, 52)}<div class="meta"><div class="nm">${sp.name}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)}</div></div><button class="btn sm" data-act="sell" data-v="${f.id}" data-d="${dest}">${U.money(G.fishValue(f) * mult)}</button></div>`;
     }).join('');
     return h;
   }
@@ -323,13 +335,14 @@ G.UI = (function () {
   /* ----- Mapa ----- */
   function mapBody() {
     return `<p class="ds" style="color:var(--mut)">Viaja rápido a un punto de pesca de la costa de Málaga.</p>` + `<div class="item"><div style="font-size:30px">🏪</div><div class="meta"><div class="nm">Paseo de las tiendas</div><div class="ds">Cebos, cañas, lonja, tu pescadería y el marinero</div></div><button class="btn sm" data-act="travel" data-v="tiendas">Ir</button></div>` + G.World.SPOTS.map(s =>
-      `<div class="item"><div style="font-size:30px">${s.icon}</div><div class="meta"><div class="nm">${s.name}</div><div class="ds">${s.sub}${s.locked ? ' · 🔒 se desbloquea más adelante' : ''}</div></div><button class="btn sm" data-act="travel" data-v="${s.id}" ${s.locked ? 'disabled' : ''}>Ir</button></div>`).join('') +
+      `<div class="item"><div style="font-size:30px">${s.icon}</div><div class="meta"><div class="nm">${s.name}</div><div class="ds">${s.sub}${s.locked && !G.unlocked('cabopino') ? ' · 🔒 misión «Explorador»' : ''}</div></div><button class="btn sm" data-act="travel" data-v="${s.id}" ${s.locked && !G.unlocked('cabopino') ? 'disabled' : ''}>Ir</button></div>`).join('') +
       `<div class="item"><div style="font-size:30px">🤿</div><div class="meta"><div class="nm">Zona de buceo</div><div class="ds">Rocas del Peñón · pesca submarina</div></div><button class="btn sm" data-act="travel" data-v="dive">Ir</button></div>`;
   }
 
   /* ----- Ajustes ----- */
   function menuBody() {
-    return `<div class="item"><div style="font-size:28px">🏆</div><div class="meta"><div class="nm">Logros</div><div class="ds">Gana gemas 💎 jugando</div></div><button class="btn sm" data-act="go" data-v="ach">Ver</button></div>
+    return `<div class="item"><div style="font-size:28px">📜</div><div class="meta"><div class="nm">Misiones</div><div class="ds">${G.Quests.readyCount() ? '¡' + G.Quests.readyCount() + ' por reclamar!' : 'Objetivos con premios y desbloqueos'}</div></div><button class="btn sm" data-act="go" data-v="quests">Ver</button></div>
+      <div class="item"><div style="font-size:28px">🏆</div><div class="meta"><div class="nm">Logros</div><div class="ds">Gana gemas 💎 jugando</div></div><button class="btn sm" data-act="go" data-v="ach">Ver</button></div>
       <div class="item"><div style="font-size:28px">📅</div><div class="meta"><div class="nm">Calendario diario</div><div class="ds">${G.Cal.canClaim() ? '¡Tienes un premio por reclamar!' : 'Vuelve mañana'}</div></div><button class="btn sm" data-act="go" data-v="cal">Ver</button></div>
       <div class="item"><div class="meta"><div class="nm">Sonido</div></div><button class="btn sm" data-act="mute">${G.S.muted ? '🔇 Activar' : '🔊 Silenciar'}</button></div>
       <div class="sec">Código de regalo</div>
@@ -365,6 +378,7 @@ G.UI = (function () {
     if (act === 'buy') {
       const pools = { rods: G.RODS, lines: G.LINES, hooks: G.HOOKS, spears: G.SPEARS, gear: G.DIVE_GEAR, extras: G.EXTRAS };
       const it = pools[d.k].find(x => x.id === d.v);
+      if (lockedBy(d.k, d.v)) return UI.toast('🔒 Completa la misión «' + lockedBy(d.k, d.v).name + '» para desbloquearlo', 'warn');
       if (S.money < it.price) return UI.toast('No tienes suficiente dinero', 'warn');
       S.money -= it.price; S.owned[d.k].push(it.id);
       const eqKey = { rods: 'rod', lines: 'line', hooks: 'hook', spears: 'spear' }[d.k];
@@ -459,7 +473,7 @@ G.UI = (function () {
       <div id="cfish" style="margin:6px 0"></div>
       <h3>${sp.name}</h3><div class="sci">${sp.sci}</div>${sp.prot ? '<div style="margin-top:4px"><span class="badge new" style="background:#2e7d5b">🛡️ Especie protegida</span></div>' : ''}<div style="margin:6px 2px 2px;font-size:12.5px;line-height:1.35;color:var(--mut)">${sp.desc || ''}</div>
       <div class="stats"><div><b>${c.cm} cm</b><span>TAMAÑO</span></div><div><b>${U.kg(c.kg)}</b><span>PESO</span></div><div><b>${U.money(G.fishValue(c))}</b><span>VALOR</span></div></div>
-      <div>${flags.isNew ? '<span class="badge new">⭐ ¡NUEVA ESPECIE!</span>' : ''}${flags.isRecord ? '<span class="badge rec">🏆 ¡Récord!</span>' : ''}${c.hurt ? `<span class="badge rec" style="background:#b0413a">🩹 ${c.hurt} · ${Math.round(c.fresh)}% fresco</span>` : ''}${flags.bonus ? `<span class="badge new">🎁 Premio +${U.money(flags.bonus)}</span>` : ''}</div>
+      <div>${flags.isNew ? '<span class="badge new">⭐ ¡NUEVA ESPECIE!</span>' : ''}${flags.isRecord ? '<span class="badge rec">🏆 ¡Récord!</span>' : ''}${flags.bonus ? `<span class="badge new">🎁 Premio +${U.money(flags.bonus)}</span>` : ''}</div>
       ${flags.isNew ? `<div class="ds" style="color:var(--mut);margin-top:6px">${flags.n}/${G.SPECIES.length} especies</div>` : ''}
       ${sp.prot ? `<div class="ds" style="margin-top:8px;color:#ffb27a;font-weight:700">🛡️ Protegida: si te la quedas hay un ${Math.round(G.PROT_CHANCE * 100)}% de multa de ${U.money(c.value * G.PROT_FINE)}</div>` : ''}
       <div class="catbtns" style="display:flex;gap:8px;margin-top:14px"><button class="btn ghost" style="flex:1" id="crel">🌊 Devolver al mar</button><button class="btn primary" style="flex:1.4;font-size:15px;padding:12px 10px" id="ckeep">${flags.full ? '🧊 Guardar (nevera llena)' : '🧊 Guardar en la nevera'}</button></div></div></div>`;
@@ -491,8 +505,8 @@ G.UI = (function () {
   UI.showSwap = function (c, done, rect) {
     ms = { type: 'swap', c, done, rect };
     const S = G.S, row = (f, id, label) => {
-      const sp = G.SPECIES_BY_ID[f.sp], fl = G.freshLabel(f);
-      return `<div class="item">${fishPh(sp.id, 52)}<div class="meta"><div class="nm">${sp.name} ${rarChip(sp.rar)}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)} · ${U.money(G.fishValue(f))}</div><div class="ds" style="color:${fl[1]};font-weight:800">${fl[0]} ${Math.round(G.freshOf(f))}%${f.hurt ? ' · 🩹 ' + f.hurt.toLowerCase() : ''}</div></div><button class="btn sm warn" data-act="swapout" data-v="${id}">${label}</button></div>`;
+      const sp = G.SPECIES_BY_ID[f.sp];
+      return `<div class="item">${fishPh(sp.id, 52)}<div class="meta"><div class="nm">${sp.name} ${rarChip(sp.rar)}</div><div class="ds">${f.cm} cm · ${U.kg(f.kg)} · ${U.money(G.fishValue(f))}</div></div><button class="btn sm warn" data-act="swapout" data-v="${id}">${label}</button></div>`;
     };
     modal.className = '';
     modal.innerHTML = `<div class="sheet"><header><h2>🧊 Nevera llena</h2></header><div class="body"><p class="ds" style="color:var(--mut)">Tu ${G.cooler().name.toLowerCase()} está llena (${S.bag.length}/${G.coolerCap()}). Elige qué pez devuelves al mar.</p>
@@ -566,6 +580,7 @@ G.UI = (function () {
 
   /* Botones */
   $('hGems').addEventListener('click', () => UI.open('ach'));
+  $('hQuest').addEventListener('click', () => UI.open('quests'));
   $('btnInv').addEventListener('click', () => UI.open('inv'));
   $('btnShop').addEventListener('click', () => G.dayButton());
   $('btnMap').addEventListener('click', () => UI.open('map'));
