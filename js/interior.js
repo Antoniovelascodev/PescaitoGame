@@ -23,7 +23,7 @@ G.Interior = (function () {
 
   /* Tu casa: cama, pecera, armario y álbum */
   const HOME = {
-    bed: { x0: 262, x1: 342, y0: 96, y1: 186, ctx: '🛏️ Dormir hasta las 07:00', run: () => G.Home.sleep() },
+    bed: { x0: 262, x1: 342, y0: 96, y1: 186, get ctx() { return '🛏️ Dormir hasta las ' + (G.mapId === 'valle' ? '06:00' : '07:00'); }, run: () => G.Home.sleep() },
     tank: { x0: 104, x1: 256, y0: 72, y1: 108, ctx: '🐠 Abrir la pecera', run: () => G.UI.open('tank') },
     ward: { x0: 18, x1: 70, y0: 92, y1: 170, ctx: '👕 Cambiarme de ropa', run: () => G.UI.open('fashion') },
     book: { x0: 24, x1: 78, y0: 200, y1: 238, ctx: '📖 Álbum de capturas', run: () => G.UI.open('inv', 'album') },

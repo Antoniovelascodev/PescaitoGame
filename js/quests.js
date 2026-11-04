@@ -30,6 +30,9 @@ G.Quests = (function () {
   def('sleep1', '🛏️', 'Dulces sueños', 'Duerme una noche en tu casa (de 19:00 a 07:00).', () => cnt('slept'), 1, { money: 80, gems: 1 });
   def('tank3', '🐠', 'Mi pecera', 'Guarda 3 peces en la pecera de tu casa.', () => cnt('tankIn'), 3, { money: 100 }, 'tank2');
   def('sp10', '📖', 'Naturalista', 'Consigue 10 especies distintas en el álbum.', () => G.speciesCount(), 10, { money: 150, gems: 1 }, 'deep');
+  def('fresh5', '🏞️', 'Pescador de río', 'Pesca 5 peces de agua dulce en el valle (río, lago o estanque).', () => cnt('fresh'), 5, { money: 120 });
+  def('chest1', '🧰', 'Cazatesoros', 'Abre el cofre del islote del lago, al final del muelle.', () => cnt('chests'), 1, { money: 200, gems: 1 });
+  def('talk3', '💬', 'Vecino del valle', 'Habla con 3 vecinos del pueblo.', () => cnt('talk'), 3, { money: 100 });
   def('night3', '🌙', 'Pescador nocturno', 'Pesca 3 peces de noche.', () => cnt('night'), 3, { money: 120 });
   def('trash10', '♻️', 'Mar limpio', 'Retira 10 basuras del mar.', () => S().stats.trash || 0, 10, { money: 150, gems: 1 });
   def('stall5', '🏪', 'Tendero', 'Vende 5 pescados en tu pescadería.', () => cnt('stallSales'), 5, { money: 200, gems: 1 });
@@ -40,15 +43,17 @@ G.Quests = (function () {
   def('sp25', '🗺️', 'Explorador', 'Consigue 25 especies distintas.', () => G.speciesCount(), 25, { money: 500, gems: 3 }, 'cabopino');
   def('epic1', '💜', 'Pez épico', 'Pesca un pez épico.', () => rar('epico'), 1, { money: 600, gems: 3 }, 'pro');
   def('kg20', '⚖️', 'Pieza de 20 kg', 'Pesca un pez de 20 kg o más.', maxKg, 20, { money: 800, gems: 4 });
+  def('koi1', '🎏', 'Un koi en el estanque', 'Pesca una carpa koi en el valle.', () => (S().album.koi || {}).n || 0, 1, { money: 900, gems: 3 });
   def('leg1', '🌟', 'Leyenda del mar', 'Pesca un pez legendario.', () => rar('leyenda'), 1, { money: 3000, gems: 10 });
 
+  for (const q of L) if (['fresh5', 'chest1', 'talk3', 'koi1'].includes(q.id)) q.valle = true;   // solo se ven en el Valle
   Q.list = L;
   Q.done = (q) => !!(S().quests && S().quests[q.id]);
   const curOf = (q) => { try { return q.cur(); } catch (e) { return 0; } };
   Q.progress = (q) => Math.min(q.max, curOf(q));
   Q.ready = (q) => !Q.done(q) && curOf(q) >= q.max;
   /* Las 3 primeras misiones sin cobrar son las activas */
-  Q.active = () => L.filter(q => !Q.done(q)).slice(0, 3);
+  Q.active = () => L.filter(q => !Q.done(q) && (!q.valle || G.mapId === 'valle')).slice(0, 3);
   Q.readyCount = () => Q.active().filter(Q.ready).length;
   Q.rewardText = (r) => [r.money ? '💶 ' + U.money(r.money) : '', r.gems ? '💎 ' + r.gems : ''].filter(Boolean).join(' · ');
 
@@ -86,8 +91,8 @@ G.Quests = (function () {
   UI.panels.quests = {
     title: () => '📜 Misiones',
     body() {
-      const act = Q.active(), done = L.filter(Q.done), left = L.length - done.length - act.length;
-      let h = `<div class="sum"><span>Completadas ${done.length} / ${L.length}</span><span>${left > 0 ? left + ' más por descubrir' : ''}</span></div><div class="bar" style="margin-bottom:8px"><i style="width:${done.length / L.length * 100}%"></i></div>`;
+      const vis = L.filter(q => !q.valle || G.mapId === 'valle'), act = Q.active(), done = vis.filter(Q.done), left = vis.length - done.length - act.length;
+      let h = `<div class="sum"><span>Completadas ${done.length} / ${vis.length}</span><span>${left > 0 ? left + ' más por descubrir' : ''}</span></div><div class="bar" style="margin-bottom:8px"><i style="width:${done.length / vis.length * 100}%"></i></div>`;
       h += `<div class="sec">Misiones activas</div>` + (act.map(q => card(q, Q.ready(q))).join('') || `<p class="ds" style="color:var(--mut);text-align:center">¡Has completado todas las misiones! 🎉</p>`);
       if (done.length) h += `<div class="sec">Completadas</div>` + done.slice().reverse().map(q => `<div class="item on"><div style="font-size:26px;width:36px;text-align:center">✅</div><div class="meta"><div class="nm">${q.name}</div><div class="ds">${q.desc}</div></div></div>`).join('');
       return h;

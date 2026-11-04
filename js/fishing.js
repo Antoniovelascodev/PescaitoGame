@@ -30,6 +30,8 @@ G.Fish = (function () {
     for (const sp of G.SPECIES) {
       if (!sp.modes.includes(mode)) continue;
       if (h.depth < sp.dmin || h.depth > sp.dmax) continue;
+      if (!!sp.fresh !== !!h.fresh) continue;
+      if (sp.sea && G.season() >= 0 && !sp.sea.includes(G.season())) continue;
       if (!(sp.hab.includes('O') || sp.hab.includes(h.hab))) continue;
       if (!hookFits(sp)) continue;
       if (G.RAR_ORDER.indexOf(sp.rar) > G.BAITS[bi].maxRar) continue;
@@ -93,6 +95,7 @@ G.Fish = (function () {
   function reachDist(a) {
     // máxima distancia en metros según caña y límites (boyas, costa)
     let m = G.rod().reach;
+    if (G.World.validCast) return Math.max(4, m);
     const dy = Math.sin(a);
     if (dy < -0.02) m = Math.min(m, (G.P.y - (G.BUOY_Y + 10)) / (-dy) / PXM);
     return Math.max(4, m);
@@ -102,6 +105,7 @@ G.Fish = (function () {
     return { x: G.P.x + Math.cos(a) * dm * PXM, y: G.P.y + Math.sin(a) * dm * PXM, dm };
   }
   function validTarget(p) {
+    if (G.World.validCast) return G.World.validCast(p);
     return p.x > G.World.FENCE_L + 30 && p.x < G.World.PORT_FENCE_X - 30 && p.y < G.World.shoreY(p.x) - 12 && p.y > G.BUOY_Y + 4 && !G.World.inPier(p.x, p.y, 6);
   }
 
@@ -131,7 +135,7 @@ G.Fish = (function () {
   F.release = function () {
     if (F.state === 'charge') {
       const p = aimPoint(F.aim, F.power);
-      if (!validTarget(p)) { F.state = 'idle'; G.UI.toast('Apunta hacia el mar 🌊', 'warn'); G.UI.fishHud(null); return; }
+      if (!validTarget(p)) { F.state = 'idle'; G.UI.toast(G.mapId === 'valle' ? 'Apunta hacia el agua 🌊' : 'Apunta hacia el mar 🌊', 'warn'); G.UI.fishHud(null); return; }
       doCast(p);
     }
   };
@@ -398,7 +402,7 @@ G.Fish = (function () {
     const isRecord = rec && (catchObj.kg > rec.maxKg);
     if (isNew) G.S.album[sp.id] = { n: 1, maxCm: catchObj.cm, maxKg: catchObj.kg, day: G.S.day };
     else { rec.n++; rec.maxCm = Math.max(rec.maxCm, catchObj.cm); rec.maxKg = Math.max(rec.maxKg, catchObj.kg); }
-    G.S.stats.fish++;
+    G.S.stats.fish++; if (sp.fresh) G.Ach.count('fresh');
     G.Audio.play(sp.rar === 'comun' || sp.rar === 'poco' ? 'win' : 'rare');
     let bonus = 0;
     const n = G.speciesCount();

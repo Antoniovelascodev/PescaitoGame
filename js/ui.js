@@ -22,8 +22,8 @@ G.UI = (function () {
     const S = G.S, e = G.env;
     $('hMoney').textContent = '💶 ' + U.money(S.money);
     const h = e.hour, ic = h >= 6 && h < 8.5 ? '🌅' : h >= 8.5 && h < 19 ? '☀️' : h >= 19 && h < 21 ? '🌇' : '🌙';
-    $('hClock').textContent = ic + ' ' + U.clock(h) + ' · Día ' + S.day;
-    $('hSwell').textContent = '🌊 ' + G.SWELL_NAMES[S.swell];
+    $('hClock').textContent = ic + ' ' + U.clock(h) + ' · ' + (G.mapId === 'valle' ? G.SEASON_ICON[G.season()] + ' ' + G.dateText() : 'Día ' + S.day);
+    $('hSwell').textContent = G.mapId === 'valle' ? '🌤️ Despejado' : '🌊 ' + G.SWELL_NAMES[S.swell];
     const b = G.BAITS.find(x => x.id === S.eq.bait);
     $('hBait').textContent = b.icon + ' ' + (S.baits[b.id] || 0);
     const mny = Math.round(S.money * 100) / 100;
@@ -146,7 +146,7 @@ G.UI = (function () {
     spear: { title: 'Arpón y Buceo', tabs: [['buceo', '🤿 Buceo y arpones']], extras: [] },
     paddle: { title: 'Paddle Surf', tabs: [['extras', '🏄 Tablas']], extras: ['paddle'] },
   };
-  const TITLES = { inv: 'Inventario', shop: 'Pesca El Anzuelo', lonja: 'Lonja · Proveedores', map: 'Mapa de Málaga', menu: 'Ajustes' };
+  const TITLES = { inv: 'Inventario', shop: 'Pesca El Anzuelo', lonja: 'Lonja · Proveedores', map: 'Mapa', menu: 'Ajustes' };
 
   function render() {
     if (!ms) return;
@@ -334,9 +334,15 @@ G.UI = (function () {
 
   /* ----- Mapa ----- */
   function mapBody() {
-    return `<p class="ds" style="color:var(--mut)">Viaja rápido a un punto de pesca de la costa de Málaga.</p>` + `<div class="item"><div style="font-size:30px">🏪</div><div class="meta"><div class="nm">Paseo de las tiendas</div><div class="ds">Cebos, cañas, lonja, tu pescadería y el marinero</div></div><button class="btn sm" data-act="travel" data-v="tiendas">Ir</button></div>` + G.World.SPOTS.map(s =>
-      `<div class="item"><div style="font-size:30px">${s.icon}</div><div class="meta"><div class="nm">${s.name}</div><div class="ds">${s.sub}${s.locked && !G.unlocked('cabopino') ? ' · 🔒 misión «Explorador»' : ''}</div></div><button class="btn sm" data-act="travel" data-v="${s.id}" ${s.locked && !G.unlocked('cabopino') ? 'disabled' : ''}>Ir</button></div>`).join('') +
-      `<div class="item"><div style="font-size:30px">🤿</div><div class="meta"><div class="nm">Zona de buceo</div><div class="ds">Rocas del Peñón · pesca submarina</div></div><button class="btn sm" data-act="travel" data-v="dive">Ir</button></div>`;
+    const valle = G.mapId === 'valle';
+    const spots = G.World.SPOTS.map(s => {
+      const lk = s.locked && !G.unlocked('cabopino');
+      return `<div class="item"><div style="font-size:30px">${s.icon}</div><div class="meta"><div class="nm">${s.name}</div><div class="ds">${s.sub}${lk ? ' · 🔒 misión «Explorador»' : ''}</div></div><button class="btn sm" data-act="travel" data-v="${s.id}" ${lk ? 'disabled' : ''}>Ir</button></div>`;
+    }).join('');
+    return `<p class="ds" style="color:var(--mut)">Viaja rápido a un punto de pesca ${valle ? 'del valle' : 'de la costa de Málaga'}.</p>`
+      + `<div class="item"><div style="font-size:30px">🏪</div><div class="meta"><div class="nm">${valle ? 'Pueblo y tiendas' : 'Paseo de las tiendas'}</div><div class="ds">Cebos, cañas, lonja, tu pescadería y ${valle ? 'vecinos' : 'el marinero'}</div></div><button class="btn sm" data-act="travel" data-v="tiendas">Ir</button></div>`
+      + spots
+      + (valle ? '' : `<div class="item"><div style="font-size:30px">🤿</div><div class="meta"><div class="nm">Zona de buceo</div><div class="ds">Rocas del Peñón · pesca submarina</div></div><button class="btn sm" data-act="travel" data-v="dive">Ir</button></div>`);
   }
 
   /* ----- Ajustes ----- */
@@ -345,6 +351,8 @@ G.UI = (function () {
       <div class="item"><div style="font-size:28px">🏆</div><div class="meta"><div class="nm">Logros</div><div class="ds">Gana gemas 💎 jugando</div></div><button class="btn sm" data-act="go" data-v="ach">Ver</button></div>
       <div class="item"><div style="font-size:28px">📅</div><div class="meta"><div class="nm">Calendario diario</div><div class="ds">${G.Cal.canClaim() ? '¡Tienes un premio por reclamar!' : 'Vuelve mañana'}</div></div><button class="btn sm" data-act="go" data-v="cal">Ver</button></div>
       <div class="item"><div class="meta"><div class="nm">Sonido</div></div><button class="btn sm" data-act="mute">${G.S.muted ? '🔇 Activar' : '🔊 Silenciar'}</button></div>
+      <div class="sec">Mapa</div>
+      <div class="item"><div style="font-size:28px">${G.mapId === 'valle' ? '🏞️' : '🏖️'}</div><div class="meta"><div class="nm">${G.mapId === 'valle' ? 'Valle del Pescador' : 'Costa del Sol'}</div><div class="ds">${G.mapId === 'valle' ? 'Estaciones, río, lago y pueblo' : 'El mapa original de la costa'} · tu dinero, equipo y peces se conservan</div></div><button class="btn sm" data-act="switchmap">${G.mapId === 'valle' ? 'Ir a la costa' : 'Ir al valle'}</button></div>
       <div class="sec">Código de regalo</div>
       <div class="item"><input id="codeIn" class="codein" type="text" placeholder="Escribe tu código" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24"><button class="btn sm" data-act="redeem">Canjear</button></div>
       <div class="sec">Cómo se juega</div>
@@ -451,6 +459,7 @@ G.UI = (function () {
       if (gift.money) S.money = Math.round((S.money + gift.money) * 100) / 100;
       G.Audio.play('coin'); UI.toast('🎁 ¡Código canjeado! +' + U.money(gift.money), 'good'); UI.refreshHud(); G.save(); return render();
     }
+    if (act === 'switchmap') { close(); G.setMap(G.mapId === 'valle' ? 'costa' : 'valle', true); G.save(); UI.toast(G.mapId === 'valle' ? '🏞️ Bienvenido al Valle del Pescador' : '🏖️ De vuelta a la Costa del Sol', 'good'); return; }
     if (act === 'mute') { G.Audio.setMuted(!S.muted); return render(); }
     if (act === 'reset') {
       if (ms.confirmReset) { G.resetGame(); location.reload(); return; }

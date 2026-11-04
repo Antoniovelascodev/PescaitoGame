@@ -51,17 +51,18 @@ window.G = window.G || {};
     G.S.time = G.env.hour; updateNight();
     G.S.gt = (G.S.gt || 0) + hrs;
     G.Stall.tick(hrs);
-    if (G.env.hour < prev) newDay();
+    if (G.env.hour < prev && G.mapId === 'costa') newDay();
   };
 
   /* Medianoche: cambia el día (nuevo encargo del marinero y el mar puede cambiar) */
   function newDay() {
     const S = G.S;
     S.day++; S.dayLog = { fish: 0 };
-    S.swell = U.clamp(S.swell + U.pick([-1, 0, 0, 1, 1]), 0, 3);
-    G.Audio.setSwell(S.swell);
+    if (G.mapId === 'costa') { S.swell = U.clamp(S.swell + U.pick([-1, 0, 0, 1, 1]), 0, 3); G.Audio.setSwell(S.swell); }
     G.save();
   }
+  G.newDay = newDay;
+  G.snapCam = () => { cam.x = G.P.x; cam.y = G.P.y; };
 
   /* Sin aire en el mar: te sacan los socorristas, pagas el rescate y apareces en el paseo */
   G.rescue = function () {
@@ -89,9 +90,14 @@ window.G = window.G || {};
     if (G.Fish.busy()) return null;
     const S = G.S, p = G.P;
     // el marinero del puerto
-    if (G.Sailor.near(p)) return { label: '⚓ Hablar con el marinero', run: () => G.UI.open('sailor') };
+    if (G.mapId === 'costa' && G.Sailor.near(p)) return { label: '⚓ Hablar con el marinero', run: () => G.UI.open('sailor') };
+    if (G.mapId === 'valle') {
+      const npc = W.nearNpc(p);
+      if (npc) return { label: '💬 Hablar con ' + npc.name, run: () => W.talk(npc) };
+      if (U.dist(p.x, p.y, W.CHEST.x, W.CHEST.y) < 64) return { label: '🧰 Abrir el cofre', run: () => W.openChest() };
+    }
     // tiendas físicas del paseo
-    const sh = W.buildings.find(b => b.label && p.x > b.x - 6 && p.x < b.x + b.w + 6 && p.y > W.PROM_Y1 - 120);
+    const sh = W.shopAt ? W.shopAt(p) : W.buildings.find(b => b.label && p.x > b.x - 6 && p.x < b.x + b.w + 6 && p.y > W.PROM_Y1 - 120);
     if (sh) {
       if (sh.kind === 'castle') return { label: '🏰 Castillo Sohail', run: () => G.UI.toast('🏰 Castillo de Sohail (s. X): fortaleza mora sobre el cerro de Fuengirola. ¡Qué vistas!', 'good') };
       const gear = ['bait', 'rods', 'spear', 'paddle', 'kayak', 'animal'].includes(sh.kind);
@@ -151,6 +157,7 @@ window.G = window.G || {};
     if (paused) return;
     if (G.Interior.active) { G.Interior.update(dt); return; }
 
+    if (G.mapId === 'valle' && E.hour >= 2 && E.hour < 5.5) { G.Home.passOut(); return; }
     // reloj continuo: de día 1 hora de juego = 30 s; de noche (21:00-06:00) = 7,5 s
     { const hh = E.hour; G.addTime(dt / (hh >= 21 || hh < 6 ? 7.5 : 30)); }
     W.updateSchools(E.t, G.Fish.state !== 'idle' ? G.Fish.target : null);
@@ -170,7 +177,7 @@ window.G = window.G || {};
       const okx = ok(nx, P.y), oky = ok(P.x, ny);
       if (okx) P.x = nx;
       if (oky) P.y = ny;
-      if (!okx || !oky) G.Social.blocked(!okx ? nx : P.x, !oky ? ny : P.y);
+      if ((!okx || !oky) && G.mapId === 'costa') G.Social.blocked(!okx ? nx : P.x, !oky ? ny : P.y);
       P.ang = Math.atan2(I.y, I.x); P.moving = true; P.walk += dt * 10 * I.mag;
     } else if ((st === 'wait' || st === 'nibble')) {
       // mirando al corcho
@@ -179,7 +186,7 @@ window.G = window.G || {};
     // que la tabla no quede varada en tierra al cambiar de sitio
     G.Fish.update(dt);
 
-    G.Social.update(dt);
+    if (G.mapId === 'costa') G.Social.update(dt);
     G.Sailor.update(dt);
     G.Stall.update(dt);
 
@@ -189,7 +196,7 @@ window.G = window.G || {};
     G.UI.setCtx(c ? c.label : null);
 
     // lugar actual
-    const zn = W.zoneAt(P.x);
+    const zn = W.zoneAt(P.x, P.y);
     let spot = zn.name;
     if (S.onPaddle) spot = `🏄 En la tabla · ${Math.round(W.depthAt(P.x, P.y))} m de la orilla`;
     else if (W.inPier(P.x, P.y, 4)) spot = 'Espigón en T';
@@ -198,7 +205,7 @@ window.G = window.G || {};
     G.UI.syncButtons();
 
     // tutorial
-    if (S.tutorial === 0 && W.shoreY(P.x) - P.y < 60 && P.y < W.shoreY(P.x) + 100) { S.tutorial = 1; G.UI.toast('Mantén 🎣 LANZAR y suelta para lanzar al mar. Mueve el joystick para apuntar.'); }
+    if (S.tutorial === 0 && (W.nearWater ? W.nearWater(P) : W.shoreY(P.x) - P.y < 60 && P.y < W.shoreY(P.x) + 100)) { S.tutorial = 1; G.UI.toast('Mantén 🎣 LANZAR y suelta para lanzar al mar. Mueve el joystick para apuntar.'); }
     if (S.tutorial === 1 && G.Fish.state === 'bite') { S.tutorial = 2; G.UI.toast('¡Pica! Pulsa ⚡ ¡CLAVAR! rápido', 'good'); }
     if (S.tutorial === 2 && G.Fish.state === 'fight') { S.tutorial = 3; G.UI.toast('Mantén 🌀 RECOGE. Si el pez tira (⚠️), ¡suelta!', 'good'); }
 
@@ -337,14 +344,12 @@ window.G = window.G || {};
     F.drawUnder(ctx);
     W.drawLand(ctx, vis, E);
     W.drawBuoys(ctx, vis, E);
-    drawBoardOnSand(ctx);
-    G.Stall.draw(ctx, vis, E);
-    G.Sailor.draw(ctx, E);
+    if (G.mapId === 'costa') { drawBoardOnSand(ctx); G.Stall.draw(ctx, vis, E); G.Sailor.draw(ctx, E); }
     drawPlayer(ctx);
     if (P.act) G.Char.drawAct(ctx, P, P.act);
     F.draw(ctx);
     W.drawTall(ctx, vis, E);
-    G.Social.draw(ctx, E);
+    if (G.mapId === 'costa') G.Social.draw(ctx, E);
     drawNight(ctx);
   }
 
@@ -402,8 +407,10 @@ window.G = window.G || {};
   function start() {
     G.TEX.init(ctx);
     const had = G.load();
-    G.env.hour = G.S.time; G.env.swell = G.env.swellF = G.S.swell; updateNight();
     G.P.x = G.S.pos.x; G.P.y = G.S.pos.y;
+    G.setMap(G.S.map || 'costa', !had);
+    if (!had && G.S.map === 'valle') G.S.time = 8;
+    G.env.hour = G.S.time; G.env.swell = G.env.swellF = G.S.swell; updateNight();
     if (G.S.onPaddle && !W.canPaddle(G.P.x, G.P.y)) G.S.onPaddle = false;
     if (!G.S.onPaddle) { const fs = W.freeSpot(G.P.x, G.P.y); G.P.x = fs.x; G.P.y = fs.y; }
     cam.x = G.P.x; cam.y = G.P.y;

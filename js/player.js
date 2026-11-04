@@ -179,6 +179,7 @@ G.Char = (function () {
   function releaseTarget() {
     const P = G.P, W = G.World;
     if (G.S.onPaddle) { const a = P.ang + Math.PI / 2; return { x: P.x + Math.cos(a) * 70, y: P.y + Math.sin(a) * 70 }; }
+    if (W.releasePoint) return W.releasePoint(P);
     if (W.inPier(P.x, P.y, 10)) return { x: P.x + (P.x < 1625 ? -70 : 70), y: P.y };
     return { x: P.x + U.rand(-6, 6), y: Math.max(W.shoreY(P.x) - 34, P.y - 175) };
   }

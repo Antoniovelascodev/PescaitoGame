@@ -12,7 +12,7 @@ window.G = window.G || {};
     bag: [], album: {}, shopLevel: 0, milestones: [],
     stats: { casts: 0, fish: 0, earned: 0, dives: 0, trash: 0 },
     pos: { x: 2945, y: 1420 }, onPaddle: false, board: null, worldV: 2,
-    tutorial: 0, muted: false, codes: [], tank: [], unlocks: {}, quests: {},
+    tutorial: 0, muted: false, map: 'valle', valle: {}, codes: [], tank: [], unlocks: {}, quests: {},
   });
 
   G.newState = def;
@@ -24,6 +24,8 @@ window.G = window.G || {};
       if (!raw) return false;
       const d = JSON.parse(raw), b = def();
       G.S = Object.assign(b, d);
+      if (d.map == null) G.S.map = 'costa'; // las partidas anteriores siguen en la Costa del Sol
+      G.S.valle = Object.assign(b.valle, d.valle || {});
       G.S.phase = 'day'; // el juego ya no tiene jornadas: todo es continuo
       G.S.owned = Object.assign(b.owned, d.owned || {});
       G.S.eq = Object.assign(b.eq, d.eq || {});
