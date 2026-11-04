@@ -66,18 +66,18 @@ G.UI = (function () {
   let lastBtn = '';
   UI.syncButtons = function () {
     const st = G.Fish.state;
-    let key = st, ic = '🎣', lb = 'LANZAR', cls = 'act big';
-    if (st === 'charge') { ic = '💪'; lb = '¡SUELTA!'; }
-    else if (st === 'cast') { ic = '🎣'; lb = '...'; }
-    else if (st === 'wait' || st === 'nibble') { ic = '↩️'; lb = 'RECOGER'; }
-    else if (st === 'bite') { ic = '⚡'; lb = '¡CLAVAR!'; cls += ' bite'; }
-    else if (st === 'fight') { ic = '🌀'; lb = 'RECOGE'; cls += ' reel'; }
-    else if (st === 'steal') { ic = '🕊️'; lb = '...'; }
-    else if (st === 'result') { ic = '✔️'; lb = '...'; }
+    let key = st, ic = 'rod', lb = 'LANZAR', cls = 'act big';
+    if (st === 'charge') { ic = 'rod'; lb = '¡SUELTA!'; }
+    else if (st === 'cast') { ic = 'rod'; lb = '...'; }
+    else if (st === 'wait' || st === 'nibble') { ic = 'reel'; lb = 'RECOGER'; }
+    else if (st === 'bite') { ic = 'bolt'; lb = '¡CLAVAR!'; cls += ' bite'; }
+    else if (st === 'fight') { ic = 'reel'; lb = 'RECOGE'; cls += ' reel'; }
+    else if (st === 'steal') { ic = 'bird'; lb = '...'; }
+    else if (st === 'result') { ic = 'check'; lb = '...'; }
     if (key === lastBtn) return;
     lastBtn = key;
     castBtn.className = cls;
-    castBtn.innerHTML = `<span class="ic">${ic}</span><span class="lb">${lb}</span>`;
+    castBtn.innerHTML = `<span class="ic"><img class="pxi inl" src="${G.Pix.icon(ic)}" alt=""></span><span class="lb">${lb}</span>`;
   };
   const dayBtn = $('btnShop');
   UI.syncDayButton = function () {

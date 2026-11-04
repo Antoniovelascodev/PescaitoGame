@@ -42,6 +42,7 @@ window.G = window.G || {};
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', () => setTimeout(resize, 200));
   resize();
+  G.Pix.watchEmoji();
 
   /* ---------- Tiempo ---------- */
   function updateNight() {

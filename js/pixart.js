@@ -359,7 +359,7 @@ G.Pix = (function () {
     return { cv: c, ax: 8, ay: 14 };
   });
   /* ---------------- Iconos del HUD (14x14, se amplían con CSS sin suavizar) ---------------- */
-  const icons = {};
+  const icons = {}, iconCv = {};
   const IC = {
     coin(x) { const b = P.blob(14, 14, (i, j) => (i - 6.5) ** 2 + (j - 6.5) ** 2 <= 36, ['#fff6b0', '#ffd23a', '#e0a020', '#6a4210'], 3); x.drawImage(b, 0, 0); rect(x, '#b9781a', 6, 3, 2, 8); rect(x, '#fff6b0', 5, 3, 1, 3); },
     gem(x) { const b = P.blob(14, 14, (i, j) => j >= 2 && j <= 12 && Math.abs(i - 6.5) <= (j < 5 ? 3 + (j - 2) * 1.2 : 6.6 - (j - 5) * 0.85), ['#e6d6ff', '#a47af4', '#6a3fc8', '#2d1a66'], 5); x.drawImage(b, 0, 0); rect(x, '#e6d6ff', 4, 4, 2, 2); rect(x, '#5a30b0', 6, 7, 3, 3); },
@@ -380,13 +380,62 @@ G.Pix = (function () {
     flower(x) { for (const [i, j] of [[6, 2], [3, 5], [9, 5], [4, 8], [8, 8]]) rect(x, '#ff7aa8', i, j, 2, 2); rect(x, '#ffe052', 6, 5, 2, 2); rect(x, '#3a7a2e', 6, 9, 2, 4); },
     snow(x) { for (const [i, j] of [[6, 1], [6, 12], [1, 6], [12, 6], [3, 3], [10, 3], [3, 10], [10, 10]]) rect(x, '#dff0fa', i, j, 2, 2); rect(x, '#9fd0ec', 5, 5, 4, 4); rect(x, '#dff0fa', 6, 6, 2, 2); },
     bag(x) { rect(x, '#3b2412', 2, 4, 10, 9); rect(x, '#b9484a', 3, 5, 8, 7); rect(x, '#8a2e32', 3, 9, 8, 3); rect(x, '#3b2412', 4, 2, 6, 3); rect(x, '#e0c070', 5, 3, 4, 1); rect(x, '#e0c070', 6, 8, 2, 2); },
+    rod(x) { const dk = '#3b2412'; for (let k = 0; k <= 10; k++) { rect(x, dk, 1 + k - 1, 12 - k, 3, 2); } for (let k = 0; k <= 10; k++) { dot(x, k % 3 === 2 ? '#d9b070' : '#a8743e', 1 + k, 12 - k); dot(x, '#c39662', 1 + k, 11 - k); } rect(x, '#5a3a1c', 1, 12, 2, 2); rect(x, '#e0d8c0', 11, 3, 1, 6); dot(x, dk, 11, 10); dot(x, '#cfd6de', 10, 11); dot(x, '#cfd6de', 9, 10); dot(x, dk, 10, 12); dot(x, '#ff5a3a', 11, 9); },
+    bolt(x) { const pts = [[8, 0], [7, 1], [6, 2], [5, 3], [4, 4], [3, 5], [3, 6], [4, 6], [5, 6], [6, 6], [5, 7], [4, 8], [4, 9], [3, 10], [3, 11], [2, 12], [6, 8], [6, 7]]; for (const [i, j] of pts) rect(x, '#5a3a00', i - 1, j - 1, 3, 3); const fill = [[8, 0], [7, 1], [6, 2], [5, 3], [4, 4], [4, 5], [5, 5], [6, 5], [7, 5], [6, 6], [5, 7], [5, 8], [4, 9], [4, 10], [3, 11], [7, 4], [8, 4], [9, 4], [6, 4]]; for (const [i, j] of fill) dot(x, '#ffe24a', i, j); dot(x, '#fff8b0', 7, 1); dot(x, '#fff8b0', 5, 4); },
+    reel(x) { const b = P.blob(14, 14, (i, j) => { const d = (i - 6.5) ** 2 + (j - 6.5) ** 2; return d <= 30 && d >= 5; }, ['#e4e8ee', '#aab4c2', '#7a8494', '#2a303c'], 12); x.drawImage(b, 0, 0); rect(x, '#2a303c', 5, 5, 4, 4); rect(x, '#cfd6de', 6, 6, 2, 2); for (const [i, j] of [[6, 1], [6, 12], [1, 6], [12, 6]]) dot(x, '#2a303c', i, j); rect(x, '#2a303c', 11, 6, 3, 3); rect(x, '#d4502c', 12, 7, 1, 1); },
+    trophy(x) { rect(x, '#5a3a00', 3, 1, 8, 7); rect(x, '#ffd23a', 4, 1, 6, 6); rect(x, '#fff2a0', 4, 1, 2, 4); rect(x, '#d89a1c', 8, 3, 2, 4); rect(x, '#5a3a00', 1, 2, 3, 4); rect(x, '#5a3a00', 10, 2, 3, 4); rect(x, '#ffd23a', 2, 3, 1, 2); rect(x, '#ffd23a', 11, 3, 1, 2); rect(x, '#5a3a00', 6, 7, 2, 3); rect(x, '#d89a1c', 6, 7, 2, 2); rect(x, '#5a3a00', 3, 10, 8, 3); rect(x, '#b9781a', 4, 11, 6, 1); },
+    book(x) { rect(x, '#2a1a40', 1, 2, 12, 10); rect(x, '#f6f1e4', 2, 3, 5, 8); rect(x, '#e6dcc4', 7, 3, 5, 8); rect(x, '#2a1a40', 6, 2, 2, 10); for (const j of [5, 7, 9]) { rect(x, '#8a7a5a', 3, j, 3, 1); rect(x, '#8a7a5a', 8, j, 3, 1); } rect(x, '#d03a2a', 11, 2, 1, 4); },
+    bed(x) { rect(x, '#3b2412', 0, 6, 14, 7); rect(x, '#8a5a34', 1, 10, 12, 2); rect(x, '#3b2412', 0, 3, 2, 10); rect(x, '#2f7fd0', 2, 7, 11, 3); rect(x, '#4a96e0', 2, 7, 11, 1); rect(x, '#f6f1e4', 2, 5, 4, 3); rect(x, '#3b2412', 12, 10, 2, 3); },
+    house(x) { rect(x, '#3b2412', 1, 6, 12, 7); rect(x, '#f6e3c4', 2, 7, 10, 5); rect(x, '#3b2412', 0, 5, 14, 1); for (let j = 0; j < 5; j++) rect(x, j % 2 ? '#a8452c' : '#c4573a', 1 + j, 1 + (4 - j) * 0, 12 - j * 2, 1); rect(x, '#3b2412', 6, 0, 2, 1); for (let j = 0; j < 5; j++) { rect(x, '#3b2412', 6 - j - 1, 1 + j, 1, 1); rect(x, '#3b2412', 7 + j + 1, 1 + j, 1, 1); rect(x, '#c4573a', 6 - j, 1 + j, 2 + j * 2, 1); } rect(x, '#3b2412', 6, 8, 3, 5); rect(x, '#8a5a34', 6, 9, 2, 4); rect(x, '#9fd6ea', 3, 8, 2, 2); rect(x, '#9fd6ea', 10, 8, 2, 2); },
+    lock(x) { rect(x, '#2a303c', 3, 1, 8, 6); rect(x, '#9aa4b2', 4, 2, 2, 5); rect(x, '#9aa4b2', 8, 2, 2, 5); rect(x, '#2a303c', 2, 6, 10, 7); rect(x, '#e0b030', 3, 7, 8, 5); rect(x, '#fff2a0', 3, 7, 8, 1); rect(x, '#2a303c', 6, 8, 2, 3); },
+    unlock(x) { rect(x, '#2a303c', 7, 0, 6, 6); rect(x, '#9aa4b2', 8, 1, 4, 5); rect(x, '#2a303c', 2, 6, 10, 7); rect(x, '#4cb04a', 3, 7, 8, 5); rect(x, '#bff0a0', 3, 7, 8, 1); rect(x, '#2a303c', 6, 8, 2, 3); },
+    check(x) { for (const [i, j] of [[2, 7], [3, 8], [4, 9], [5, 8], [6, 7], [7, 6], [8, 5], [9, 4], [10, 3]]) { rect(x, '#14381e', i - 1, j - 1, 3, 3); } for (const [i, j] of [[2, 7], [3, 8], [4, 9], [5, 8], [6, 7], [7, 6], [8, 5], [9, 4], [10, 3]]) dot(x, '#5ee070', i, j); for (const [i, j] of [[3, 7], [4, 8], [9, 3]]) dot(x, '#c8ffd0', i, j); },
+    cross(x) { for (let k = 2; k <= 11; k++) { rect(x, '#4a0e0a', k - 1, k - 1, 3, 3); rect(x, '#4a0e0a', 13 - k - 1, k - 1, 3, 3); } for (let k = 2; k <= 11; k++) { dot(x, '#ff5a4a', k, k); dot(x, '#ff5a4a', 13 - k, k); } },
+    gift(x) { rect(x, '#3b0e2a', 1, 5, 12, 8); rect(x, '#d03a7a', 2, 6, 10, 6); rect(x, '#e86a9a', 2, 6, 10, 1); rect(x, '#3b0e2a', 0, 3, 14, 3); rect(x, '#e8508a', 1, 4, 12, 1); rect(x, '#ffd23a', 6, 3, 2, 10); rect(x, '#ffd23a', 4, 1, 2, 2); rect(x, '#ffd23a', 8, 1, 2, 2); },
+    anchor(x) { rect(x, '#1a2a44', 6, 1, 2, 11); rect(x, '#9fb4cc', 6, 2, 1, 9); rect(x, '#1a2a44', 4, 3, 6, 2); rect(x, '#9fb4cc', 5, 3, 4, 1); rect(x, '#1a2a44', 1, 8, 2, 3); rect(x, '#1a2a44', 11, 8, 2, 3); rect(x, '#1a2a44', 2, 11, 10, 2); rect(x, '#9fb4cc', 3, 11, 8, 1); rect(x, '#1a2a44', 5, 0, 4, 2); rect(x, '#d9e6f4', 6, 0, 2, 1); },
+    chest(x) { rect(x, '#2b1a0c', 1, 3, 12, 10); rect(x, '#8a5a2a', 2, 6, 10, 6); rect(x, '#b27a3c', 2, 4, 10, 3); rect(x, '#ffd36a', 2, 7, 10, 1); rect(x, '#ffd36a', 6, 6, 2, 4); rect(x, '#2b1a0c', 6, 8, 2, 1); },
+    speech(x) { rect(x, '#2b1a0c', 1, 1, 12, 9); rect(x, '#f6f1e4', 2, 2, 10, 7); rect(x, '#2b1a0c', 3, 10, 3, 3); rect(x, '#f6f1e4', 3, 10, 2, 2); for (const i of [4, 6, 8]) rect(x, '#5a4a30', i, 5, 1, 1); },
+    door(x) { rect(x, '#2b1a0c', 2, 0, 10, 14); rect(x, '#8a5a34', 3, 1, 8, 12); rect(x, '#a8743e', 3, 1, 3, 12); rect(x, '#6e4526', 7, 2, 1, 10); rect(x, '#ffd23a', 9, 7, 1, 2); },
+    shirt(x) { rect(x, '#2b1a0c', 0, 2, 14, 5); rect(x, '#2b1a0c', 3, 1, 8, 12); rect(x, '#f6f1e4', 4, 3, 6, 9); rect(x, '#e0583a', 1, 3, 3, 3); rect(x, '#e0583a', 10, 3, 3, 3); rect(x, '#e0583a', 4, 3, 6, 4); rect(x, '#2b1a0c', 5, 1, 4, 2); },
+    star(x) { const pts = [[6, 1], [7, 1], [6, 3], [7, 3], [5, 4], [8, 4], [1, 5], [2, 5], [3, 5], [4, 5], [9, 5], [10, 5], [11, 5], [12, 5], [3, 7], [10, 7], [3, 8], [10, 8], [4, 9], [9, 9], [4, 10], [9, 10]]; void pts; const b = P.blob(14, 14, (i, j) => { const a = Math.atan2(j - 7, i - 6.5), r = Math.hypot(i - 6.5, j - 7); return r <= 3.2 + 3.6 * Math.max(0, Math.cos((a + Math.PI / 2) * 5)) ** 2; }, ['#fff6b0', '#ffd23a', '#e0a020', '#6a4210'], 14); x.drawImage(b, 0, 0); },
+    warn(x) { for (let j = 0; j < 12; j++) { const w = Math.round(j * 0.55) + 1; rect(x, '#3a2a00', 7 - w - 1, 1 + j, 2 * w + 2, 1); } for (let j = 1; j < 11; j++) { const w = Math.round(j * 0.55); rect(x, '#ffd23a', 7 - w, 1 + j, 2 * w, 1); } rect(x, '#3a2a00', 6, 4, 2, 4); rect(x, '#3a2a00', 6, 9, 2, 2); },
+    bird(x) { rect(x, '#2b3a50', 1, 5, 4, 3); rect(x, '#f2f5f8', 2, 5, 3, 2); rect(x, '#2b3a50', 5, 4, 5, 4); rect(x, '#f2f5f8', 5, 5, 4, 2); rect(x, '#2b3a50', 9, 3, 4, 4); rect(x, '#f2f5f8', 10, 4, 2, 2); rect(x, '#f0a020', 13, 5, 1, 1); dot(x, '#101820', 11, 4); rect(x, '#2b3a50', 4, 1, 4, 4); rect(x, '#d9e2ea', 5, 2, 2, 2); },
     shop(x) { rect(x, '#3b2412', 1, 5, 12, 8); rect(x, '#f2e2b0', 2, 7, 10, 5); rect(x, '#8a5a34', 6, 8, 3, 4); for (let i = 1; i < 13; i += 2) rect(x, i % 4 === 1 ? '#d03a2a' : '#f6f1e4', i, 2, 2, 4); rect(x, '#3b2412', 1, 1, 12, 1); rect(x, '#6cb0e0', 3, 8, 2, 2); },
   };
   P.icon = (name) => {
     if (icons[name]) return icons[name];
-    const [c, x] = mk(14, 14); (IC[name] || IC.coin)(x);
+    const [c, x] = mk(14, 14); (IC[name] || IC.coin)(x); iconCv[name] = c;
     return (icons[name] = c.toDataURL());
   };
+  /* ---- Sustituye los emojis del texto por iconos pixel ---- */
+  const EMO = { '🎣': 'rod', '💪': 'rod', '↩': 'reel', '⚡': 'bolt', '🌀': 'reel', '🕊': 'bird', '✔': 'check', '✅': 'check', '❌': 'cross', '🎒': 'bag', '🏪': 'shop', '💶': 'coin', '💰': 'coin', '💎': 'gem', '🪱': 'worm', '🐟': 'sardine', '🐠': 'sardine', '🦀': 'crab', '🧊': 'cooler', '📜': 'scroll', '🏆': 'trophy', '📖': 'book', '🗺': 'map', '⚙': 'gear', '🛏': 'bed', '🏠': 'house', '🔒': 'lock', '🔓': 'unlock', '🎁': 'gift', '⚓': 'anchor', '🌙': 'moon', '☀': 'sun', '🌅': 'sunset', '🌇': 'sunset', '🌊': 'wave', '🧰': 'chest', '💬': 'speech', '🚪': 'door', '👕': 'shirt', '⭐': 'star', '🌟': 'star', '⚠': 'warn', '🏖': 'sun', '🏞': 'leaf', '🌸': 'flower', '🍂': 'leaf', '❄': 'snow', '🌲': 'leaf', '🪷': 'flower', '🌿': 'leaf', '♻': 'leaf', '🏊': 'wave', '🤿': 'wave', '🏄': 'wave', '🏰': 'house', '🌉': 'house', '🏝': 'sun', '🎏': 'sardine', '🔱': 'anchor', '🔦': 'sun', '🥽': 'wave', '🌤': 'sun', '🪧': 'scroll', '🔥': 'sun', '🚚': 'shop', '🧴': 'cooler', '🥫': 'cooler', '🛍': 'bag', '💨': 'wave', '📅': 'scroll', '📆': 'scroll', '💜': 'gem', '💙': 'gem', '🚔': 'warn', '🛟': 'wave', '🛡': 'check', '⚖': 'coin', '📈': 'trophy', '🅿': 'house', '🐧': 'sardine', '🐢': 'sardine', '🦈': 'sardine', '🏅': 'trophy', '👨': 'shirt', '🕹': 'gear', '😕': '', '😴': '', '😅': '' };
+  for (const k of Object.keys(EMO)) { const n = k.replace(/[\uFE0F\u200D]/g, ''); if (n !== k) { EMO[n] = EMO[k]; delete EMO[k]; } }
+  const EMO_RE = /(?:\p{Extended_Pictographic})[\uFE0F\u200D]*(?:\p{Extended_Pictographic}[\uFE0F]*)*/gu;
+  const hasEmo = (s) => /\p{Extended_Pictographic}/u.test(s);
+  function emojifyNode(n) {
+    const s = n.nodeValue; if (!hasEmo(s)) return;
+    const frag = document.createDocumentFragment(); let last = 0, m; EMO_RE.lastIndex = 0;
+    while ((m = EMO_RE.exec(s))) {
+      if (m.index > last) frag.appendChild(document.createTextNode(s.slice(last, m.index)));
+      const key = [...m[0]][0].replace(/[\uFE0F\u200D]/g, ''), name = EMO[key];
+      if (name) { const im = document.createElement('img'); im.className = 'pxi inl'; im.src = P.icon(name); im.alt = ''; frag.appendChild(im); }
+      last = m.index + m[0].length;
+    }
+    if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
+    n.replaceWith(frag);
+  }
+  function emojifyTree(root) {
+    if (root.nodeType === 3) { if (root.parentNode && !/^(SCRIPT|STYLE|TEXTAREA|OPTION)$/.test(root.parentNode.nodeName)) emojifyNode(root); return; }
+    if (root.nodeType !== 1 || /^(CANVAS|SCRIPT|STYLE|IMG)$/.test(root.nodeName)) return;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = []; let t; while ((t = w.nextNode())) if (hasEmo(t.nodeValue)) list.push(t);
+    list.forEach(emojifyNode);
+  }
+  P.emojify = emojifyTree;
+  P.watchEmoji = function () {
+    emojifyTree(document.body);
+    new MutationObserver((muts) => { for (const m of muts) { if (m.type === 'characterData') emojifyTree(m.target); else m.addedNodes.forEach(emojifyTree); } }).observe(document.body, { childList: true, subtree: true, characterData: true });
+  };
+  P.iconCanvas = (name) => { P.icon(name); return iconCv[name]; };
   P.iconHtml = (name, px) => `<img class="pxi" src="${P.icon(name)}" width="${px || 28}" height="${px || 28}" alt="">`;
   return P;
 })();

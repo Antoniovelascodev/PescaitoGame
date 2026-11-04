@@ -280,3 +280,14 @@ canvas#game.pix { image-rendering: pixelated; image-rendering: crisp-edges; imag
 #title h1 { font-family: var(--mono); color: #fff2c8; font-size: 40px; letter-spacing: 0; text-shadow: 3px 3px 0 #2b1a0c, -1px -1px 0 #2b1a0c, 1px -1px 0 #2b1a0c, -1px 1px 0 #2b1a0c; }
 #title .sub, #title .tip { color: #2b1a0c; font-family: var(--mono); font-weight: 700; text-shadow: none; background: rgba(255,244,204,.8); padding: 6px 10px; box-shadow: 0 -2px 0 #2b1a0c, 0 2px 0 #2b1a0c, -2px 0 0 #2b1a0c, 2px 0 0 #2b1a0c; }
 #title .tip:empty { display: none; }
+
+/* iconos pixel en lugar de emojis */
+.pxi.inl { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -0.3em; margin: 0 .12em 0 0; image-rendering: pixelated; image-rendering: crisp-edges; }
+.act .ic { display: flex; align-items: center; justify-content: center; font-size: 0; }
+.act.big .ic .pxi.inl { width: 56px; height: 56px; margin: 0; }
+.act.small .ic .pxi.inl { width: 42px; height: 42px; margin: 0; }
+.act.ctx .pxi.inl { width: 28px; height: 28px; }
+.toast .pxi.inl { width: 28px; height: 28px; vertical-align: -0.5em; }
+.sheet h2 .pxi.inl { width: 28px; height: 28px; vertical-align: -0.45em; }
+.item > div[style*="font-size:3"] .pxi.inl, .item > div[style*="font-size:2"] .pxi.inl { width: 42px; height: 42px; margin: 0; }
+.tab .pxi.inl { width: 22px; height: 22px; vertical-align: -0.4em; }

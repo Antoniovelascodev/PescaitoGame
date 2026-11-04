@@ -140,7 +140,7 @@ G.Interior = (function () {
     ctx.fillStyle = '#6e4526'; ctx.fillRect(COUNTER.x0, COUNTER.y0, COUNTER.x1 - COUNTER.x0, COUNTER.y1 - COUNTER.y0);
     ctx.fillStyle = '#b57a46'; ctx.fillRect(COUNTER.x0, COUNTER.y0, COUNTER.x1 - COUNTER.x0, 14);
     ctx.fillStyle = '#2a2018'; ctx.fillRect(COUNTER.x0 + 70, COUNTER.y0 + 2, 26, 10);
-    ctx.font = '12px serif'; ctx.fillStyle = '#000'; ctx.fillText('💶', COUNTER.x0 + 83, COUNTER.y0 + 8);
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(G.Pix.mk ? G.Pix.iconCanvas('coin') : null, COUNTER.x0 + 77, COUNTER.y0 + 2, 12, 12);
     // puerta
     ctx.fillStyle = '#3b2a1c'; ctx.fillRect(DOOR.x0 - 4, RH - 8, DOOR.x1 - DOOR.x0 + 8, 8);
     ctx.fillStyle = 'rgba(255,240,180,0.55)'; ctx.fillRect(DOOR.x0, RH - 6, DOOR.x1 - DOOR.x0, 6);
@@ -204,7 +204,7 @@ G.Interior = (function () {
     ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(108, 18, 8, 46);
     ctx.fillStyle = '#6e4526'; ctx.fillRect(B.tank.x0, 72, B.tank.x1 - B.tank.x0, 36); ctx.fillStyle = '#8a5a34'; ctx.fillRect(B.tank.x0, 72, B.tank.x1 - B.tank.x0, 6);
     ctx.fillStyle = '#fff'; ctx.font = '800 9px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🐠 ' + (G.S.tank || []).length + '/' + G.Home.tankCap(), 180, 92);
+    ctx.fillText((G.S.tank || []).length + '/' + G.Home.tankCap(), 190, 92); ctx.drawImage(G.Pix.iconCanvas('sardine'), 164, 85, 14, 14);
     // armario
     box(B.ward, '#7a5230'); ctx.fillStyle = '#946a3f'; ctx.fillRect(B.ward.x0 + 3, B.ward.y0 + 3, 21, 72); ctx.fillRect(B.ward.x0 + 28, B.ward.y0 + 3, 21, 72);
     ctx.fillStyle = '#ffd36a'; ctx.fillRect(B.ward.x0 + 20, B.ward.y0 + 36, 3, 8); ctx.fillRect(B.ward.x0 + 28, B.ward.y0 + 36, 3, 8);
