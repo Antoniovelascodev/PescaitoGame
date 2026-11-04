@@ -133,17 +133,17 @@ G.Social = (function () {
     for (const b of bubbles) {
       const a = b.t < 0.15 ? b.t / 0.15 : b.t > b.life - 0.5 ? Math.max(0, (b.life - b.t) / 0.5) : 1;
       const words = b.text.split(' '), lines = []; let cur = '';
-      for (const w of words) { if ((cur + ' ' + w).trim().length > 22) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }
+      for (const w of words) { if ((cur + ' ' + w).trim().length > 17) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }
       lines.push(cur);
       ctx.font = '700 10.5px system-ui, sans-serif';
-      const w = Math.min(160, Math.max(...lines.map(l => ctx.measureText(l).width)) + 14), h = lines.length * 13 + 8;
+      const w = Math.min(240, Math.max(...lines.map(l => ctx.measureText(l).width)) + 16), h = lines.length * 14 + 10;
       const x = b.x, y = b.y - 22 - Math.min(10, b.t * 8) - h / 2;
       ctx.globalAlpha = a;
       ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x - w / 2 + 6, y - h / 2); ctx.arcTo(x + w / 2, y - h / 2, x + w / 2, y + h / 2, 7); ctx.arcTo(x + w / 2, y + h / 2, x - w / 2, y + h / 2, 7); ctx.arcTo(x - w / 2, y + h / 2, x - w / 2, y - h / 2, 7); ctx.arcTo(x - w / 2, y - h / 2, x + w / 2, y - h / 2, 7); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x - 4, y + h / 2 - 0.5); ctx.lineTo(x, y + h / 2 + 6); ctx.lineTo(x + 4, y + h / 2 - 0.5); ctx.fill();
       ctx.fillStyle = '#1b2a3a';
-      lines.forEach((l, i) => ctx.fillText(l, x, y - h / 2 + 4 + 6.5 + i * 13));
+      lines.forEach((l, i) => ctx.fillText(l, x, y - h / 2 + 5 + 6 + i * 14));
     }
     ctx.restore();
   }
