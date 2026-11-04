@@ -11,7 +11,7 @@ G.World = (function () {
   /* ---- La Costa del Sol, de izquierda (Benalmádena) a derecha (Cabopino) ---- */
   const ZONES = [
     { id: 'puerto_ben', x0: 0, x1: 560, name: 'Puerto de Benalmádena', prom: 'port', beach: 'port' },
-    { id: 'ben_pto', x0: 560, x1: 1100, name: 'Benalmádena · AnimalLife', prom: 'paseo', beach: 'sand' },
+    { id: 'ben_pto', x0: 560, x1: 1100, name: 'Benalmádena · FishLife', prom: 'paseo', beach: 'sand' },
     { id: 'ben_playa', x0: 1100, x1: 1500, name: 'Playa de Benalmádena', prom: 'paseo', beach: 'sand' },
     { id: 'ben_rocas', x0: 1500, x1: 2080, name: 'Rocas y buceo de Benalmádena', prom: 'paseo', beach: 'rock' },
     { id: 'espigon', x0: 2080, x1: 2300, name: 'Espigón en T', prom: 'paseo', beach: 'sand' },
@@ -205,21 +205,16 @@ G.World = (function () {
   const buildings = [];
   (function () {
     const named = [
-      { x: 600, w: 290, h: 215, label: 'ANIMALLIFE · ACUARIO', kind: 'animal', wall: '#d7eef7', awn: '#1d8fc9' },
-      { x: 920, w: 170, label: 'PUERTO · KAYAKS', kind: 'kayak', wall: '#dde9f2', awn: '#2a5d9e' },
-      { x: 1640, w: 170, label: 'ARPÓN Y BUCEO', kind: 'spear', wall: '#f7e6d3', awn: '#e07a2b' },
-      { x: 2672, w: 170, label: 'TU CASA', kind: 'home', wall: '#f6e3c4', awn: '#c2477e' },
-      { x: 2860, w: 170, label: 'EL CEBO · BÁSICOS', kind: 'bait', wall: '#e7f1df', awn: '#2f9e5b' },
-      { x: 3038, w: 170, label: 'PESCA EL ANZUELO', kind: 'rods', wall: '#e4ecf7', awn: '#2d6fc4' },
-      { x: 3216, w: 170, label: 'PADDLE SURF', kind: 'paddle', wall: '#def3f3', awn: '#1fb5c4' },
-      { x: 3420, w: 190, label: 'LONJA · PROVEEDORES', kind: 'lonja', wall: '#e1e9ea', awn: '#2c8c6a' },
-      { x: 3640, w: 190, label: 'MODA MARINERA', kind: 'fashion', wall: '#f4e1ec', awn: '#c2477e' },
-      { x: 3850, w: 210, h: 150, label: 'TU PESCADERÍA', kind: 'stall', wall: '#eef3f6', awn: '#2d7fc4' },
+      { x: 600, w: 290, h: 215, label: 'FISHLIFE · ACUARIO', kind: 'fishlife', wall: '#d7eef7', awn: '#1d8fc9' },
+      { x: 930, w: 200, label: 'NATURALISTAS · RESCATE', kind: 'nature', wall: '#e3f0dc', awn: '#2f8f4e' },
+      { x: 2860, w: 260, label: 'TIENDA DE PESCA', kind: 'fishing', wall: '#e4ecf7', awn: '#2d6fc4' },
+      { x: 3180, w: 190, label: 'MODA MARINERA', kind: 'fashion', wall: '#f4e1ec', awn: '#c2477e' },
+      { x: 3440, w: 210, h: 150, label: 'TU PESCADERÍA', kind: 'stall', wall: '#eef3f6', awn: '#2d7fc4' },
       { x: 4130, w: 340, h: 215, label: 'CASTILLO SOHAIL', kind: 'castle', wall: '#d9c8a0', awn: null },
-      { x: 6700, w: 160, h: 120, label: 'CHIRINGUITO · CEBOS', kind: 'bait', wall: '#f4e7c8', awn: '#e8743b' },
-      { x: 7950, w: 160, h: 120, label: 'CHIRINGUITO DEL SOL', kind: 'bait', wall: '#e9f1d8', awn: '#f2b632' },
-      { x: 8820, w: 160, h: 120, label: 'CHIRINGUITO EL BOMBO', kind: 'bait', wall: '#f4e1d0', awn: '#c2477e' },
-      { x: 9540, w: 170, h: 130, label: 'AVÍOS DE CABOPINO', kind: 'rods', wall: '#e4ecf7', awn: '#2d6fc4' },
+      { x: 6700, w: 160, h: 120, label: 'CHIRINGUITO · PESCA', kind: 'fishing', wall: '#f4e7c8', awn: '#e8743b' },
+      { x: 7950, w: 160, h: 120, label: 'CHIRINGUITO DEL SOL', kind: 'fishing', wall: '#e9f1d8', awn: '#f2b632' },
+      { x: 8820, w: 160, h: 120, label: 'CHIRINGUITO EL BOMBO', kind: 'fishing', wall: '#f4e1d0', awn: '#c2477e' },
+      { x: 9540, w: 170, h: 130, label: 'AVÍOS DE CABOPINO', kind: 'fishing', wall: '#e4ecf7', awn: '#2d6fc4' },
     ];
     for (const n of named) buildings.push({ y: PROM_Y1, ...n, h: n.h || 190 });
     let x = 10;
@@ -236,9 +231,9 @@ G.World = (function () {
   LANDMARKS.push({ x: FARO.x, y: FARO.y, r: 28 }, { x: TORREON.x, y: TORREON.y, r: 36 }, { x: BOMBO.x, y: BOMBO.y, r: 30 });
   lamps.push({ x: FARO.x, y: FARO.y, r: 260 });
   const B_OF = (k) => buildings.find(b => b.kind === k);
-  PREP_SPAWN.x = B_OF('bait').x + 85;
-  PADDLE_SPAWN.x = B_OF('paddle').x + 95;
-  const LONJA_X = B_OF('lonja').x, STALL_X = B_OF('stall').x;
+  PREP_SPAWN.x = B_OF('fishing').x + 85;
+  PADDLE_SPAWN.x = B_OF('fishing').x + 125;
+  const STALL_X = B_OF('stall').x;
   const gulls = [];
   for (let i = 0; i < 14; i++) gulls.push({ cx: 600 + rng() * (WD.w - 1200), cy: 500 + rng() * 800, rx: 120 + rng() * 260, ry: 50 + rng() * 120, sp: 0.15 + rng() * 0.2, ph: rng() * 6 });
   const swimmers = [];
@@ -626,7 +621,7 @@ G.World = (function () {
     ctx.closePath();
   }
 
-  const ICON_OF = { bait: 'worm', rods: 'rod', spear: 'mask', paddle: 'board', kayak: 'kayak', fashion: 'shirt', stall: 'fish', lonja: 'anchor', animal: 'whale', home: 'house' };
+  const ICON_OF = { fishing: 'rod', fashion: 'shirt', stall: 'fish', fishlife: 'fish', nature: 'shell', home: 'house' };
 
   function drawCastleBody(ctx, b) {
     const { x, y, w, h } = b;
@@ -664,10 +659,15 @@ G.World = (function () {
     ctx.strokeStyle = '#f4f1e6'; ctx.lineWidth = 3; ctx.strokeRect(mx, my, mw, mh);
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     for (let i = 0; i < 9; i++) { const bx = mx + 14 + i * (mw - 28) / 8 + Math.sin(t + i) * 3, by = my + mh - ((t * 14 + i * 23) % mh); ctx.beginPath(); ctx.arc(bx, by, 2 + (i % 3), 0, 6.3); ctx.fill(); }
-    G.Icons.draw(ctx, 'whale', mx + 52, my + 34, 58);
-    G.Icons.draw(ctx, 'fish', mx + mw * 0.52, my + 22, 30); G.Icons.draw(ctx, 'sardine', mx + mw * 0.6, my + 54, 26); G.Icons.draw(ctx, 'fish', mx + mw * 0.45, my + 62, 22);
-    G.Icons.draw(ctx, 'penguin', mx + mw - 78, my + mh - 24, 34); G.Icons.draw(ctx, 'penguin', mx + mw - 48, my + mh - 20, 30); G.Icons.draw(ctx, 'penguin', mx + mw - 20, my + mh - 24, 34);
-    G.Icons.draw(ctx, 'crab', mx + 30, my + mh - 14, 22); G.Icons.draw(ctx, 'shell', mx + 70, my + mh - 12, 20);
+    // FishLife empieza abandonado: pocos peces, agua verdosa. Mejora con tus entregas.
+    const lvl = G.Story ? G.Story.flLevel() : 0, n = G.Story ? G.Story.flFish().length : 0;
+    ctx.save(); ctx.globalAlpha = 0.45; G.Icons.draw(ctx, 'fish', mx + mw * 0.3 + Math.sin(t * 0.7) * 14, my + 40, 22); ctx.restore();
+    for (let i = 0; i < Math.min(n, 7); i++) G.Icons.draw(ctx, i % 2 ? 'sardine' : 'fish', mx + 30 + (i * 37) % (mw - 50) + Math.sin(t * 0.8 + i) * 8, my + 22 + (i * 23) % (mh - 40), 22 + (i % 3) * 4);
+    if (lvl >= 3) G.Icons.draw(ctx, 'whale', mx + mw - 50, my + mh - 36, 50);
+    if (lvl >= 4) G.Icons.draw(ctx, 'penguin', mx + 36, my + mh - 20, 30);
+    G.Icons.draw(ctx, 'shell', mx + 70, my + mh - 12, 18);
+    ctx.fillStyle = `rgba(74,104,38,${Math.max(0.08, 0.5 - lvl * 0.1)})`; ctx.fillRect(mx, my, mw, mh);
+    if (lvl === 0) { ctx.fillStyle = '#e8c35a'; ctx.font = '800 11px system-ui'; ctx.textAlign = 'center'; ctx.fillText('CERRADO POR OBRAS', mx + mw / 2, my + mh / 2); }
   }
 
   function drawBuilding(ctx, b) {
@@ -698,7 +698,7 @@ G.World = (function () {
       ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(ax, y + 8, aw, 5);
     }
     }
-    if (b.kind === 'animal') decorAnimal(ctx, b);
+    if (b.kind === 'fishlife') decorAnimal(ctx, b);
     if (b.label) {
       ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x + w / 2 - 24, y - 7, 48, 7);
       ctx.fillStyle = b.awn; ctx.fillRect(x + w / 2 - 22, y - 6, 44, 5);
@@ -726,19 +726,14 @@ G.World = (function () {
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const crate = (cx) => { ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(cx - 16, yy + 18, 34, 5); ctx.fillStyle = '#8f6035'; ctx.fillRect(cx - 16, yy + 6, 32, 15); ctx.fillStyle = '#b98450'; ctx.fillRect(cx - 16, yy + 6, 32, 4); };
     const ic = (n, cx, dy, sz) => G.Icons.draw(ctx, n, cx, yy + dy, sz || 18);
-    if (b.kind === 'bait') { crate(L); crate(R); ic('worm', L - 6, 4, 20); ic('crab', L + 9, 3, 20); ic('sardine', R - 6, 4, 22); ic('cooler', R + 9, 3, 20); }
-    else if (b.kind === 'rods') {
-      for (const cx of [L, R]) { ctx.fillStyle = '#6b4a2b'; ctx.fillRect(cx - 14, yy + 17, 28, 4); ctx.lineCap = 'round'; for (let i = 0; i < 4; i++) { ctx.strokeStyle = ['#5a3b22', '#2d6fc4', '#c9a24a', '#2a2a2a'][i]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 12 + i * 8, yy + 18); ctx.lineTo(cx - 9 + i * 8, yy - 10); ctx.stroke(); } }
-      ic('spool', L + 24, 8, 16); ic('hook', R - 24, 8, 16);
-    } else if (b.kind === 'spear') {
-      for (const cx of [L, R]) { ctx.fillStyle = '#4a4a50'; ctx.fillRect(cx - 14, yy + 17, 28, 4); for (let i = 0; i < 4; i++) { ctx.strokeStyle = '#8c929a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 12 + i * 8, yy + 18); ctx.lineTo(cx - 11 + i * 8, yy - 12); ctx.stroke(); ctx.fillStyle = '#d9dde3'; ctx.fillRect(cx - 13 + i * 8, yy - 15, 3, 5); } }
-      ic('mask', L + 24, 8, 18); ic('fin', R - 24, 8, 18);
-    } else if (b.kind === 'paddle') {
-      for (const cx of [L, R]) for (let i = 0; i < 3; i++) { ctx.fillStyle = ['#f7f4ea', '#2bb5c9', '#f0a040'][(i + (cx === R ? 1 : 0)) % 3]; ctx.beginPath(); ctx.ellipse(cx - 12 + i * 12, yy + 4, 5, 20, 0.12 * (i - 1), 0, 6.3); ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 1; ctx.stroke(); }
-    } else if (b.kind === 'kayak') {
-      ic('kayak', L, 6, 30); ic('anchor', R, 6, 24);
-    } else if (b.kind === 'animal') {
-      ic('penguin', L, 4, 30); ic('whale', R, 4, 34);
+    if (b.kind === 'fishing') {
+      crate(L); crate(R); ic('worm', L - 6, 4, 20); ic('crab', L + 9, 3, 20); ic('sardine', R - 6, 4, 22); ic('cooler', R + 9, 3, 20);
+      const cx = x + w / 2; ctx.fillStyle = '#6b4a2b'; ctx.fillRect(cx - 16, yy + 17, 32, 4); ctx.lineCap = 'round';
+      for (let i = 0; i < 4; i++) { ctx.strokeStyle = ['#5a3b22', '#2d6fc4', '#c9a24a', '#2a2a2a'][i]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 12 + i * 8, yy + 18); ctx.lineTo(cx - 9 + i * 8, yy - 10); ctx.stroke(); }
+    } else if (b.kind === 'fishlife') {
+      ic('fish', L, 4, 28); ic('sardine', R, 4, 28);
+    } else if (b.kind === 'nature') {
+      ic('shell', L, 4, 26); ic('crab', R, 4, 26);
     } else if (b.kind === 'fashion') {
       ic('shirt', L, 6, 24); ic('cap', R, 6, 22);
     }
@@ -1088,7 +1083,7 @@ G.World = (function () {
 
   return {
     crabNear, grabCrab, wormNear, digWorms,
-    PIER, PIERS, DIVE, DIVES, PADDLE_SPAWN, PREP_SPAWN, SPOTS, ZONES, zoneAt, nearestSpot, FENCE_L, LONJA_X, STALL_X, LANDMARKS, freeSpot, updateSchools, schoolAt, swimmerAt, hitTowel, peopleNow, sunbathersNow, drawPerson, PROM_Y1, PORT_FENCE_X, buildings,
+    PIER, PIERS, DIVE, DIVES, PADDLE_SPAWN, PREP_SPAWN, SPOTS, ZONES, zoneAt, nearestSpot, FENCE_L, STALL_X, LANDMARKS, freeSpot, updateSchools, schoolAt, swimmerAt, hitTowel, peopleNow, sunbathersNow, drawPerson, PROM_Y1, PORT_FENCE_X, buildings,
     shoreY, depthAt, habitatAt, canWalk, canPaddle, inPier,
     drawSea, drawLand, drawBuoys, drawTall, fishingLights,
     lamps, zoneAt: zoneAt,

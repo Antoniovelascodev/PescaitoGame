@@ -10,15 +10,11 @@ G.Interior = (function () {
   const ROOM = { x0: 16, x1: RW - 16, y0: 80, y1: RH - 6 };
 
   const KINDS = {
-    bait:   { title: 'EL CEBO · BÁSICOS', wall: '#cfe3c8', floor: ['#c9a679', '#bf9b6d'], awn: '#2f9e5b', shelf: ['worm', 'crab', 'sardine', 'cooler', 'lamp'], tl: 'worm', tr: 'cooler', hi: '¡Buenas! ¿Cebo fresco hoy?', go: () => G.UI.openShop('bait'), cl: { skin: 1, hair: 1, shirt: 'sh2', pants: 'pa1', shoes: 'so1', hat: 'ha0' } },
-    rods:   { title: 'PESCA EL ANZUELO · CAÑAS', wall: '#cdd9ee', floor: ['#c9a679', '#bf9b6d'], awn: '#2d6fc4', shelf: ['rod', 'spool', 'hook', 'spool', 'rod'], tl: 'rod', tr: 'hook', hi: '¿Qué pez buscas, quillo?', go: () => G.UI.openShop('rods'), cl: { skin: 0, hair: 4, shirt: 'sh3', pants: 'pa2', shoes: 'so0', hat: 'ha0' } },
-    spear:  { title: 'ARPÓN Y BUCEO', wall: '#f3dcc4', floor: ['#b9a98f', '#ad9d83'], awn: '#e07a2b', shelf: ['mask', 'fin', 'spear', 'wetsuit', 'trident'], tl: 'wetsuit', tr: 'mask', hi: 'Ojo con el arpón, que pincha.', go: () => G.UI.openShop('spear'), cl: { skin: 2, hair: 3, shirt: 'sh5', pants: 'pa3', shoes: 'so2', hat: 'ha0' } },
-    paddle: { title: 'PADDLE SURF', wall: '#d2f0f0', floor: ['#d9c9a0', '#cfbf96'], awn: '#1fb5c4', shelf: ['board', 'wave', 'board', 'lotion', 'wave'], tl: 'board', tr: 'wave', hi: 'Tablas nuevas, ¡a remar!', go: () => G.UI.openShop('paddle'), cl: { skin: 1, hair: 2, shirt: 'sh1', pants: 'pa0', shoes: 'so3', hat: 'ha0' } },
+    fishing: { title: 'TIENDA DE PESCA', wall: '#cdd9ee', floor: ['#c9a679', '#bf9b6d'], awn: '#2d6fc4', shelf: ['worm', 'rod', 'hook', 'cooler', 'mask'], tl: 'worm', tr: 'rod', hi: '¿Qué pez buscas, quillo?', go: () => G.UI.openShop('fishing'), cl: { skin: 0, hair: 4, shirt: 'sh3', pants: 'pa2', shoes: 'so0', hat: 'ha0' } },
     fashion: { title: 'MODA MARINERA', wall: '#f4e1ec', floor: ['#d8b9c6', '#cfaebb'], awn: '#c2477e', shelf: ['shirt', 'pants', 'shoe', 'cap', 'shirt'], tl: 'shirt', tr: 'pants', hi: '¡Estás guapísimo, cariño!', go: () => G.UI.open('fashion'), cl: { skin: 0, hair: 2, shirt: 'sh4', pants: 'pa4', shoes: 'so4', hat: 'ha0' } },
-    lonja:  { title: 'LONJA · PROVEEDORES', wall: '#e1e9ea', floor: ['#aeb8ba', '#a3aeb0'], awn: '#2c8c6a', shelf: ['sardine', 'crab', 'cooler', 'fish', 'sardine'], tl: 'fish', tr: 'cooler', hi: 'Pescao fresco, ¿qué traes?', go: () => G.UI.open('lonja'), cl: { skin: 3, hair: 1, shirt: 'sh0', pants: 'pa1', shoes: 'so1', hat: 'ha0' } },
-    animal: { title: 'ANIMALLIFE · ACUARIO', wall: '#bfe6f5', floor: ['#9fc4d4', '#94b9c9'], awn: '#1d8fc9', shelf: ['whale', 'fish', 'penguin', 'sardine', 'shell'], tl: 'penguin', tr: 'whale', tanks: true, hi: '¿Ya has visto a los pingüinos?', go: () => G.Interior.visit(), cl: { skin: 0, hair: 3, shirt: 'sh1', pants: 'pa1', shoes: 'so1', hat: 'ha0' } },
+    fishlife: { title: 'FISHLIFE · ACUARIO', wall: '#bfe6f5', floor: ['#9fc4d4', '#94b9c9'], awn: '#1d8fc9', shelf: ['fish', 'fish', 'fish', 'fish', 'shell'], tl: 'fish', tr: 'shell', tanks: 'fl', hi: 'Ayúdanos a reabrir el acuario…', go: () => G.UI.open('fishlife'), cl: { skin: 0, hair: 3, shirt: 'sh1', pants: 'pa1', shoes: 'so1', hat: 'ha0' } },
+    nature: { title: 'NATURALISTAS · RESCATE', wall: '#d6ecd2', floor: ['#b4c9a0', '#a9be96'], awn: '#2f8f4e', shelf: ['shell', 'crab', 'fish', 'shell', 'lotion'], tl: 'shell', tr: 'crab', tanks: 'nat', hi: '¿Traes algún pez herido?', go: () => G.UI.open('nature'), cl: { skin: 2, hair: 1, shirt: 'sh2', pants: 'pa3', shoes: 'so2', hat: 'ha0' } },
     home:   { title: 'TU CASA', home: true, wall: '#f3e8d2', floor: ['#c9a679', '#bf9b6d'], awn: '#c2477e', shelf: [], hi: '' },
-    kayak:  { title: 'PUERTO · KAYAKS', wall: '#d6e4ee', floor: ['#9fb4c0', '#94a9b5'], awn: '#2a5d9e', shelf: ['kayak', 'anchor', 'buoy', 'sonar', 'kayak'], tl: 'kayak', tr: 'buoy', hi: 'Muy pronto: kayaks y sonar de peces.', go: () => G.UI.toast('🛶 Los kayaks y el sonar llegarán con el puerto. ¡Muy pronto!', 'warn'), cl: { skin: 2, hair: 0, shirt: 'sh6', pants: 'pa5', shoes: 'so1', hat: 'ha0' } },
   };
 
   /* Tu casa: cama, pecera, armario y álbum */
@@ -113,11 +109,15 @@ G.Interior = (function () {
       if (!K.tanks) G.Icons.draw(ctx, K.shelf[i], x + 22, 42, 32);
     }
     if (K.tanks) {
+      const info = G.Story ? G.Story.tankInfo(K.tanks) : { fish: [], clean: 0 };
       for (let i = 0; i < 4; i++) {
         const tx = 20 + i * 83, g = ctx.createLinearGradient(0, 36, 0, 66); g.addColorStop(0, '#5cc4ee'); g.addColorStop(1, '#1a6fa8');
         ctx.fillStyle = '#2a3a48'; ctx.fillRect(tx - 3, 34, 70, 36); ctx.fillStyle = g; ctx.fillRect(tx, 37, 64, 30);
         ctx.fillStyle = 'rgba(255,255,255,0.4)'; for (let b = 0; b < 3; b++) { ctx.beginPath(); ctx.arc(tx + 10 + b * 20, 64 - ((I.t * 9 + b * 11 + i * 5) % 26), 1.6, 0, 6.3); ctx.fill(); }
-        G.Icons.draw(ctx, K.shelf[i], tx + 32 + Math.sin(I.t * 0.8 + i) * 12, 52 + Math.sin(I.t * 1.3 + i) * 3, 24);
+        const mine = info.fish.filter((_, k) => k % 4 === i);
+        for (let k = 0; k < mine.length; k++) { const sp = G.SPECIES_BY_ID[mine[k]]; if (sp) G.FishArt.draw(ctx, sp, tx + 18 + k * 26 + Math.sin(I.t * 0.8 + i + k) * 6, 50 + Math.sin(I.t * 1.3 + k) * 4, 20, Math.cos(I.t * 0.8 + i + k) > 0 ? 0 : Math.PI, { ph: I.t * 5 + k }); }
+        if (!mine.length) { ctx.globalAlpha = 0.35; G.Icons.draw(ctx, 'fish', tx + 32 + Math.sin(I.t * 0.6 + i) * 10, 52, 18); ctx.globalAlpha = 1; }
+        ctx.fillStyle = 'rgba(74,104,38,' + (0.12 + 0.5 * (1 - info.clean)).toFixed(2) + ')'; ctx.fillRect(tx, 37, 64, 30);
       }
     }
     // mesas de producto
@@ -230,12 +230,5 @@ G.Interior = (function () {
     ctx.restore();
   }
 
-  let seen = false;
-  function visit() {
-    const facts = ['🐧 Los pingüinos de Humboldt viven en las costas frías de Chile y Perú.', '🐢 Las tortugas bobas del Mediterráneo anidan en playas tranquilas, como las de Andalucía.', '🦈 En el Mediterráneo viven más de 40 especies de tiburones y rayas.', '🐙 Un pulpo tiene tres corazones y puede abrir un tarro por dentro.'];
-    G.UI.toast(U.pick(facts), 'good');
-    if (!G.S.cnt) G.S.cnt = {};
-    if (!G.S.cnt.animal) { G.S.cnt.animal = 1; G.S.gems = (G.S.gems || 0) + 1; G.UI.toast('💎 +1 gema por tu primera visita a AnimalLife', 'good'); G.UI.refreshHud(); }
-  }
-  return { visit, get active() { return I.active; }, enter, leave, update, draw, KINDS };
+  return { get active() { return I.active; }, enter, leave, update, draw, KINDS };
 })();

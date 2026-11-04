@@ -25,7 +25,7 @@ G.Quests = (function () {
   const def = (id, icon, name, desc, cur, max, reward, unlock) => L.push({ id, icon, name, desc, cur, max, reward, unlock });
 
   def('fish3', '🎣', 'Primeras capturas', 'Pesca 3 peces. ¡Lanza la caña al mar!', () => S().stats.fish, 3, { money: 40 });
-  def('sell1', '🚚', 'Primera venta', 'Vende un pez en la lonja o en tu pescadería.', () => cnt('lonja') + cnt('stallSales'), 1, { money: 50 });
+  def('sell1', '🚚', 'Primera venta', 'Vende un pez en tu pescadería.', () => cnt('lonja') + cnt('stallSales'), 1, { money: 50 });
   def('gear1', '🧰', 'Equípate', 'Compra una caña, un hilo o un anzuelo mejor.', gearBought, 1, { money: 60 });
   def('sleep1', '🛏️', 'Dulces sueños', 'Duerme una noche en tu casa (de 19:00 a 07:00).', () => cnt('slept'), 1, { money: 80, gems: 1 });
   def('tank3', '🐠', 'Mi pecera', 'Guarda 3 peces en la pecera de tu casa.', () => cnt('tankIn'), 3, { money: 100 }, 'tank2');

@@ -157,30 +157,25 @@ G.UI = (function () {
     shop: [['canas', 'Cañas'], ['hilos', 'Hilos'], ['anzuelos', 'Anzuelos'], ['cebos', 'Cebos'], ['neveras', '🧊 Neveras'], ['buceo', 'Buceo'], ['extras', 'Extras']],
   };
   const SHOPS = {
-    bait: { title: 'El Cebo · Básicos', tabs: [['cebos', '🪱 Cebos'], ['neveras', '🧊 Neveras'], ['extras', '🔦 Extras']], extras: ['lampara'] },
-    rods: { title: 'Pesca El Anzuelo', tabs: [['canas', 'Cañas'], ['hilos', 'Hilos'], ['anzuelos', 'Anzuelos']], extras: [] },
-    spear: { title: 'Arpón y Buceo', tabs: [['buceo', '🤿 Buceo y arpones']], extras: [] },
-    paddle: { title: 'Paddle Surf', tabs: [['extras', '🏄 Tablas']], extras: ['paddle'] },
+    fishing: { title: 'Tienda de Pesca', tabs: [['cebos', '🪱 Cebos'], ['canas', 'Cañas'], ['hilos', 'Hilos'], ['anzuelos', 'Anzuelos'], ['neveras', '🧊 Neveras'], ['buceo', '🤿 Buceo'], ['extras', '🏄 Extras']], extras: ['lampara', 'paddle'] },
   };
-  const TITLES = { inv: 'Inventario', shop: 'Pesca El Anzuelo', lonja: 'Lonja · Proveedores', map: 'Mapa', menu: 'Ajustes' };
+  const TITLES = { inv: 'Inventario', shop: 'Pesca El Anzuelo', menu: 'Ajustes' };
 
   function render() {
     if (!ms) return;
     if (ms.type === 'catch' || ms.type === 'msg') return;
     const PN = UI.panels[ms.type];
-    const tabs = ms.type === 'shop' ? SHOPS[ms.shop || 'rods'].tabs : (TABS[ms.type] || (PN && PN.tabs && PN.tabs(ms)));
+    const tabs = ms.type === 'shop' ? SHOPS[ms.shop || 'fishing'].tabs : (TABS[ms.type] || (PN && PN.tabs && PN.tabs(ms)));
     if (tabs && !ms.tab) ms.tab = tabs[0][0];
     let body = '';
     if (ms.type === 'inv') body = invBody();
     else if (ms.type === 'shop') body = (['canas', 'hilos', 'anzuelos', 'buceo', 'extras'].includes(ms.tab) ? '<p class="ds" style="color:#6df0b6">♻️ ¿Sin dinero para cebo? Puedes vender tu material al 50 % de lo que costó.</p>' : '') + shopBody();
-    else if (ms.type === 'lonja') body = sellBody('lonja');
-    else if (ms.type === 'map') body = mapBody();
     else if (ms.type === 'menu') body = menuBody();
     else if (PN) body = PN.body(ms);
     modal.className = '';
     const prev = modal.querySelector('.body');
     const sc = prev ? prev.scrollTop : 0;
-    modal.innerHTML = `<div class="sheet"><header><h2>${ms.type === 'shop' ? SHOPS[ms.shop || 'rods'].title : (TITLES[ms.type] || (PN ? PN.title(ms) : ''))}</h2><div style="display:flex;gap:8px;align-items:center"><span class="pill small">💶 ${U.money(G.S.money)}</span><span class="pill small">💎 ${G.S.gems || 0}</span><button class="x" data-act="close">✕</button></div></header>
+    modal.innerHTML = `<div class="sheet"><header><h2>${ms.type === 'shop' ? SHOPS[ms.shop || 'fishing'].title : (TITLES[ms.type] || (PN ? PN.title(ms) : ''))}</h2><div style="display:flex;gap:8px;align-items:center"><span class="pill small">💶 ${U.money(G.S.money)}</span><span class="pill small">💎 ${G.S.gems || 0}</span><button class="x" data-act="close">✕</button></div></header>
       ${tabs ? `<div class="tabs">${tabs.map(t => `<button class="tab ${ms.tab === t[0] ? 'on' : ''}" data-act="tab" data-v="${t[0]}">${t[1]}</button>`).join('')}</div>` : ''}
       <div class="body">${body}</div></div>`;
     if (PN && PN.after) PN.after(modal, ms);
@@ -320,7 +315,7 @@ G.UI = (function () {
       h += `<div class="sec">Arpones</div>` + list(G.SPEARS, S.owned.spears, 'spears', x => `+${x.pts} pts · alcance ${x.range} m`, 'spear');
       return h;
     }
-    if (t === 'extras') return G.EXTRAS.filter(g => (SHOPS[ms.shop || 'rods'].extras || []).includes(g.id)).map(g => `<div class="item">${G.Icons.html(g.ico || 'lamp', 40)}<div class="meta"><div class="nm">${g.name}</div><div class="ds">${g.desc}</div></div>${tradeBtn(g.price, S.owned.extras.includes(g.id), can(g.price), 'extras', g.id)}</div>`).join('');
+    if (t === 'extras') return G.EXTRAS.filter(g => (SHOPS[ms.shop || 'fishing'].extras || []).includes(g.id)).map(g => `<div class="item">${G.Icons.html(g.ico || 'lamp', 40)}<div class="meta"><div class="nm">${g.name}</div><div class="ds">${g.desc}</div></div>${tradeBtn(g.price, S.owned.extras.includes(g.id), can(g.price), 'extras', g.id)}</div>`).join('');
     return '';
   }
 
@@ -356,7 +351,7 @@ G.UI = (function () {
       return `<div class="item"><div style="font-size:30px">${s.icon}</div><div class="meta"><div class="nm">${s.name}</div><div class="ds">${s.sub}${lk ? ' · 🔒 misión «Explorador»' : ''}</div></div><button class="btn sm" data-act="travel" data-v="${s.id}" ${lk ? 'disabled' : ''}>Ir</button></div>`;
     }).join('');
     return `<p class="ds" style="color:var(--mut)">Viaja rápido a un punto de pesca ${valle ? 'del valle' : 'de la costa de Málaga'}.</p>`
-      + `<div class="item"><div style="font-size:30px">🏪</div><div class="meta"><div class="nm">${valle ? 'Pueblo y tiendas' : 'Paseo de las tiendas'}</div><div class="ds">Cebos, cañas, lonja, tu pescadería y ${valle ? 'vecinos' : 'el marinero'}</div></div><button class="btn sm" data-act="travel" data-v="tiendas">Ir</button></div>`
+      + `<div class="item"><div style="font-size:30px">🏪</div><div class="meta"><div class="nm">${valle ? 'Pueblo y tiendas' : 'Paseo de las tiendas'}</div><div class="ds">Tienda de pesca, moda, tu pescadería y ${valle ? 'vecinos' : 'el marinero'}</div></div><button class="btn sm" data-act="travel" data-v="tiendas">Ir</button></div>`
       + spots
       + (valle ? '' : `<div class="item"><div style="font-size:30px">🤿</div><div class="meta"><div class="nm">Zona de buceo</div><div class="ds">Rocas del Peñón · pesca submarina</div></div><button class="btn sm" data-act="travel" data-v="dive">Ir</button></div>`);
   }

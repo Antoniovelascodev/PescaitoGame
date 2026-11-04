@@ -54,7 +54,7 @@ window.G = window.G || {};
 
   /* ================= El marinero ================= */
   const S0 = () => G.S;
-  const POS = { x: G.World.LONJA_X + 226, y: 1432 };
+  const POS = { x: G.World.STALL_X + 250, y: 1432 };
   const Sailor = {};
   const RI = ['comun', 'poco', 'raro', 'epico', 'leyenda'];
 

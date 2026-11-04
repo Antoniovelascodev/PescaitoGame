@@ -12,7 +12,7 @@ window.G = window.G || {};
     bag: [], album: {}, shopLevel: 0, milestones: [],
     stats: { casts: 0, fish: 0, earned: 0, dives: 0, trash: 0 },
     pos: { x: 2945, y: 1420 }, onPaddle: false, board: null, worldV: 2,
-    tutorial: 0, muted: false, map: 'valle', valle: {}, codes: [], tank: [], unlocks: {}, quests: {},
+    tutorial: 0, muted: false, story: { path: null, idx: { pr: 0, fl: 0, na: 0 }, base: {}, notified: {}, lastDay: null, fl: { cnt: { raro: 0, epico: 0, leyenda: 0 }, fish: [] }, nat: { healed: 0, fish: [] } }, map: 'valle', valle: {}, codes: [], tank: [], unlocks: {}, quests: {},
   });
 
   G.newState = def;

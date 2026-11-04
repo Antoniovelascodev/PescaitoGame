@@ -44,7 +44,7 @@ G.Ach = (function () {
   def('rel10', '🌊', 'Buen pescador', 'Devuelve 10 peces al mar.', 1, () => S().stats.released || 0, 10);
   def('relprot', '🛡️', 'Protector', 'Devuelve 5 especies protegidas al mar.', 3, () => cnt('protRel'), 5);
   // dinero y tiendas
-  def('lonja1', '🚚', 'Primera venta', 'Vende pescado en la lonja.', 1, () => cnt('lonja'), 1);
+  def('lonja1', '🚚', 'Primera venta', 'Vende pescado en tu pescadería.', 1, () => cnt('lonja'), 1);
   def('gear1', '🧰', 'Equipo nuevo', 'Compra una caña, un hilo o un anzuelo.', 1, () => gearBought(), 1);
   def('lamp', '🔦', 'Luz propia', 'Compra la lámpara de pesca.', 2, () => S().owned.extras.includes('lampara') ? 1 : 0, 1);
   def('paddle_buy', '🏄', 'A la tabla', 'Compra la tabla de paddle surf.', 3, () => S().owned.extras.includes('paddle') ? 1 : 0, 1);

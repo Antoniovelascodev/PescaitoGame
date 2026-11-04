@@ -109,7 +109,7 @@ window.G = window.G || {};
     const sh = W.shopAt ? W.shopAt(p) : W.buildings.find(b => b.label && p.x > b.x - 6 && p.x < b.x + b.w + 6 && p.y > W.PROM_Y1 - 120);
     if (sh) {
       if (sh.kind === 'castle') return { label: '🏰 Castillo Sohail', run: () => G.UI.toast('🏰 Castillo de Sohail (s. X): fortaleza mora sobre el cerro de Fuengirola. ¡Qué vistas!', 'good') };
-      const gear = ['bait', 'rods', 'spear', 'paddle', 'kayak', 'animal'].includes(sh.kind);
+      const gear = ['fishing', 'fishlife', 'nature'].includes(sh.kind);
       if (!G.shopOpen(sh.kind)) return { label: '🔒 Cerrado', run: () => G.UI.toast('Esta tienda está cerrada', 'warn') };
       if (sh.kind === 'stall') return { label: '🏪 Entrar: Tu pescadería', run: () => G.UI.open('stall') };
       if (G.Fish.locked()) return null;
@@ -198,6 +198,7 @@ window.G = window.G || {};
     if (G.mapId === 'costa') G.Social.update(dt);
     G.Sailor.update(dt);
     G.Stall.update(dt);
+    G.Story.gates(dt);
 
     // contexto
     const c = ctxAction();
@@ -364,6 +365,7 @@ window.G = window.G || {};
     if (P.act) G.Char.drawAct(ctx, P, P.act);
     F.draw(ctx);
     W.drawTall(ctx, vis, E);
+    G.Story.draw(ctx);
     if (G.mapId === 'costa') G.Social.draw(ctx, E);
     drawNight(ctx);
   }

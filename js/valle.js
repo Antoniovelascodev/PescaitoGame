@@ -61,7 +61,7 @@ window.G = window.G || {};
   const grassType = (tx, ty) => { const n = vnoise(tx / 7, ty / 7) * 0.7 + vnoise(tx / 3, ty / 3) * 0.3; return n < 0.36 ? 1 : n > 0.66 ? 2 : 0; };
   const disc = (cx, cy, r, f) => { for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++) for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++) if (inMap(x, y) && Math.hypot(x + .5 - cx, y + .5 - cy) <= r) f(x, y); };
   const buildings = [], lamps = [], npcs = [], treeList = [];
-  const BX = { home: 7, bait: 19, rods: 25, lonja: 31, fashion: 37, stall: 43 };   // columna (tile) de cada edificio
+  const BX = { home: 7, fishing: 19, fashion: 31, stall: 37 };   // columna (tile) de cada edificio
   const BROW = 29, BH = 5;                                                       // fila superior y alto (tiles)
 
   (function gen() {
@@ -99,7 +99,7 @@ window.G = window.G || {};
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (tiles[ix(x, y)] === T.GRASS) { let w = false; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (tileAt(x + dx, y + dy) === T.WATER) w = true; if (w && hash(x, y, 5) < 0.85) tiles[ix(x, y)] = T.SAND; }
     // camino principal (y 36-37) con puente sobre el río, y caminos secundarios
     const path = (x0, y0, x1, y1, tp) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { if (!inMap(x, y)) continue; const i = ix(x, y); tiles[i] = tiles[i] === T.WATER ? T.BRIDGE : (tp || T.PATH); } };
-    path(6, 36, 86, 37);
+    path(6, 36, 99, 37);
     path(6, 34, 50, 35, T.PLAZA);              // plaza frente a las tiendas
     path(9, 34, 10, 36);
     path(29, 38, 30, 52);                      // bajada al estanque y al sur
@@ -110,7 +110,7 @@ window.G = window.G || {};
     for (let y = 15; y <= 17; y++) for (const x of [78, 79]) if (tiles[ix(x, y)] === T.WATER) tiles[ix(x, y)] = T.BRIDGE;
     // edificios (huella sólida)
     for (const [kind, tx] of Object.entries(BX)) {
-      const w = kind === 'home' ? 7 : 5;
+      const w = kind === 'home' || kind === 'fishing' ? 7 : 5;
       for (let y = BROW; y < BROW + BH; y++) for (let x = tx; x < tx + w; x++) tiles[ix(x, y)] = T.BLDG;
     }
     // rocas, flores, bosque
@@ -134,11 +134,11 @@ window.G = window.G || {};
     for (const [x, y] of [[80, 13], [79, 12], [81, 14], [80, 14]]) if (inMap(x, y) && tiles[ix(x, y)] === T.TREE) tiles[ix(x, y)] = T.GRASS;
     // edificios (datos para dibujar y entrar)
     const info = {
-      home: ['TU CASA', '#f6e3c4', '#c2477e', '#b24a30'], bait: ['EL CEBO · BÁSICOS', '#e7f1df', '#2f9e5b', '#4a8f5a'], rods: ['PESCA EL ANZUELO', '#e4ecf7', '#2d6fc4', '#3a5f9a'],
-      lonja: ['LONJA · PROVEEDORES', '#e1e9ea', '#2c8c6a', '#5a7f86'], fashion: ['MODA MARINERA', '#f4e1ec', '#c2477e', '#9a3a6a'], stall: ['TU PESCADERÍA', '#eef3f6', '#2d7fc4', '#2d6fa4'],
+      home: ['TU CASA', '#f6e3c4', '#c2477e', '#b24a30'], fishing: ['TIENDA DE PESCA', '#e4ecf7', '#2d6fc4', '#3a5f9a'],
+      fashion: ['MODA MARINERA', '#f4e1ec', '#c2477e', '#9a3a6a'], stall: ['TU PESCADERÍA', '#eef3f6', '#2d7fc4', '#2d6fa4'],
     };
     for (const [kind, tx] of Object.entries(BX)) {
-      const [label, wall, awn, roof] = info[kind], w = kind === 'home' ? 7 : 5;
+      const [label, wall, awn, roof] = info[kind], w = kind === 'home' || kind === 'fishing' ? 7 : 5;
       buildings.push({ x: tx * TS, y: BROW * TS, w: w * TS, h: BH * TS, label, kind, wall, awn, roof });
     }
     // farolas
@@ -486,7 +486,7 @@ window.G = window.G || {};
     lucia: [
       () => ['Primavera: las truchas suben por el río. ¡Usa cangrejo o sardina!', 'En verano la carpa dorada sale del lago. Dicen que solo muerde ese día…', 'Con las hojas del otoño el lucio sale a cazar al lago.', 'En invierno el agua está tan fría que casi no pica nada. Prueba en el estanque.'][G.season()],
       () => 'Las anguilas y los siluros solo salen de noche. Si tienes lámpara, aprovecha.',
-      () => 'Vende en la lonja si tienes prisa, o monta tu pescadería y fija tú el precio.',
+      () => 'Monta tu pescadería y fija tú el precio: cuanto mejor la montes, más te pagan.',
       () => 'He oído que la carpa koi se esconde en el estanque de Don Paco.',
     ],
     paco: [
